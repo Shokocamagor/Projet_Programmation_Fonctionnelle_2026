@@ -1,0 +1,18 @@
+# Compilation SBT
+target/
+lib_managed/
+src_managed/
+project/target/
+project/project/
+
+# IDE (IntelliJ / Metals)
+.idea/
+.bsp/
+.metals/
+out/
+*.iml
+*.iws
+
+# Divers
+.DS_Store
+*.class
