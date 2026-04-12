@@ -1,0 +1,118 @@
+=== COLONIE DE FOURMIS — CYCLES, INTERACTIONS ET INVARIANTS ===
+
+
+--- ACTEURS ET LEURS CYCLES DE VIE ---
+
+REINE (QueenActor)
+  - Reçoit un Tick toutes les 4 secondes → faim augmente de 1
+  - Si faim > 10 → mort de la reine → la colonie s'effondre
+  - À chaque Tick, pond 2 œufs
+  - Reçoit FeedQueen des transporteuses → faim diminue de 1 (minimum 0)
+  - Reçoit SpawnAnt à l'éclosion → spawn une nouvelle fourmi si quota non atteint
+  - Reçoit AntDied → décrémente le compteur de la catégorie concernée
+  - État interne : hunger, foragerCount, carrierCount, liste des œufs en cours
+
+
+ŒUF (EggActor)
+  - Créé par la reine à chaque Tick (2 par cycle)
+  - Reçoit les Tick relayés par la reine
+  - Après 2 Tick reçus → éclosion
+  - Type déterminé aléatoirement à l'éclosion : Forager ou Carrier
+  - Envoie SpawnAnt à la reine puis s'arrête
+
+
+FOURRAGEUSE (ForagerAntActor)
+  États : idle → resting → restingWaiting → idle (cycle normal)
+          idle → mort (si 3 AntTick sans activité)
+          restingWaiting → mort (si 3 cycles sans manger au repos)
+
+  Cycle normal :
+    1. État idle : reçoit SearchFood (scheduler interne toutes les 6s)
+    2. Cherche entre 1 et 3 unités de nourriture (aléatoire)
+    3. Envoie DepositFood au stockage
+    4. Passe en état resting (repos de 1 cycle)
+    5. En état resting : reçoit AntTick → demande ConsumeFood au stockage
+    6. Si stockage répond FoodReady → nourrie, retour en idle, starvation = 0
+    7. Si stockage répond StorageEmpty → starvation + 1
+    8. Si starvation atteint 3 → envoie AntDied(Forager) à la reine → mort
+
+  Surveillance : observe la reine via watch(). Si la reine meurt → arrêt immédiat.
+
+
+TRANSPORTEUSE (CarrierAntActor)
+  États : idle → waiting → resting → restingWaiting → idle (cycle normal)
+          idle → mort (si 3 AntTick sans activité)
+          restingWaiting → mort (si 3 cycles sans manger au repos)
+
+  Cycle normal :
+    1. État idle : reçoit SearchFood (scheduler interne toutes les 2s)
+    2. Envoie RequestFood(max=2) au stockage
+    3. État waiting : attend la réponse du stockage
+    4. Si FoodReady → envoie FeedQueen à la reine, passe en resting, starvation = 0
+    5. Si StorageEmpty → retour en idle, starvation inchangé
+    6. En état resting : reçoit AntTick → demande ConsumeFood au stockage
+    7. Si FoodReady → nourrie, retour en idle
+    8. Si StorageEmpty → starvation + 1
+    9. Si starvation atteint 3 → envoie AntDied(Carrier) à la reine → mort
+
+  Surveillance : observe la reine via watch(). Si la reine meurt → arrêt immédiat.
+
+
+STOCKAGE (StorageActor)
+  - Reçoit DepositFood(n) des fourrageuses → stock += n (max 20)
+  - Reçoit RequestFood(max, replyTo) des transporteuses
+      → donne min(stock, max) unités, répond FoodReady ou StorageEmpty
+  - Reçoit ConsumeFood(replyTo) des fourmis au repos
+      → donne 1 unité si disponible, répond FoodReady ou StorageEmpty
+  - Pas de priorité codée explicitement — la priorité de la reine est
+    naturelle car les transporteuses livrent avant que les fourmis se reposent
+
+
+--- INTERACTIONS ENTRE ACTEURS ---
+
+  Fourrageuse ──DepositFood──────────► Stockage
+  Transporteuse ──RequestFood─────────► Stockage ──FoodReady──► Transporteuse
+  Transporteuse ──FeedQueen───────────► Reine
+  Fourrageuse (repos) ──ConsumeFood──► Stockage
+  Transporteuse (repos) ──ConsumeFood► Stockage
+  Œuf ──SpawnAnt──────────────────────► Reine ──spawn──► nouvelle fourmi
+  Fourmi morte ──AntDied──────────────► Reine
+
+
+--- INVARIANTS MÉTIER ---
+
+  I1 : La faim de la reine est toujours dans [0, 10]
+       Vérifié dans Invariants.scala à chaque Tick
+
+  I2 : Il ne peut pas y avoir plus de 4 fourrageuses simultanément
+       Vérifié dans QueenActor à chaque SpawnAnt(Forager)
+
+  I3 : Il ne peut pas y avoir plus de 4 transporteuses simultanément
+       Vérifié dans QueenActor à chaque SpawnAnt(Carrier)
+
+  I4 : Le stock ne peut pas dépasser 20 unités
+       Vérifié dans StorageActor à chaque DepositFood
+
+  I5 : Le stock ne peut pas être négatif
+       Garanti structurellement — le stockage ne livre que ce qu'il a
+
+  I6 : Une fourmi qui meurt notifie toujours la reine
+       Garanti par AntDied envoyé avant Behaviors.stopped
+
+
+--- PROPRIÉTÉS LTL (à formaliser dans le réseau de Pétri) ---
+
+  Sûreté S1 : G (hunger <= MaxHunger)
+    → La faim de la reine ne dépasse jamais 10
+
+  Sûreté S2 : G (foragerCount <= 4 ∧ carrierCount <= 4)
+    → Les quotas par catégorie sont toujours respectés
+
+  Vivacité V1 : G (hunger > 0 → F (FeedQueen))
+    → Si la reine a faim, elle sera toujours nourrie à terme
+
+  Vivacité V2 : G (antIdle → F (SearchFood))
+    → Une fourmi disponible finira toujours par agir
+
+  Vivacité V3 : G (eggExists → F (SpawnAnt))
+    → Tout œuf finit toujours par éclore
