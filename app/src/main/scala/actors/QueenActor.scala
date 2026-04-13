@@ -77,7 +77,7 @@ object QueenActor {
               } else {
                 val id = foragerNextId
                 val name = s"forager-$id"
-                context.spawn(ForagerAntActor(context.self, storage, id), name)
+                context.spawn(ColonyGuardianActor.supervisedForager(context.self, storage, id), name)
                 SimulationLogger.logAntSpawned("Fourrageuse", id, foragerCount+1)
                 context.log.info(s"[Reine] Nouvelle fourrageuse née ! Total : ${foragerCount + 1}/$MaxPerType")
                 QueenActor(storage, hunger, foragerCount + 1, carrierCount, foragerNextId + 1, carrierNextId, eggs)
@@ -93,7 +93,7 @@ object QueenActor {
               } else {
                 val id = carrierNextId
                 val name = s"carrier-$id"
-                context.spawn(CarrierAntActor(context.self, storage, id), name)
+                context.spawn(ColonyGuardianActor.supervisedCarrier(context.self, storage, id), name)
                 SimulationLogger.logAntSpawned("Transporteuse", id, carrierCount+1)
                 context.log.info(s"[Reine] Nouvelle transporteuse née ! Total : ${carrierCount + 1}/$MaxPerType")
                 QueenActor(storage, hunger, foragerCount, carrierCount + 1, foragerNextId, carrierNextId + 1, eggs)

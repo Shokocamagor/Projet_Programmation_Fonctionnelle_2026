@@ -68,7 +68,7 @@ object ForagerAntActor {
         case AntTick =>
           val next = restCycles - 1
           SimulationLogger.logForagerRest(id, next)
-          context.log.info(s"[Fourrageuse-$id] Au repos ($next cycles restants)  — demande nourriture au stockage.")
+          context.log.info(s"[Fourrageuse-$id] Au repos — demande nourriture au stockage.")
           storage ! ConsumeFood(context.self)
           restingWaiting(queen, storage, id, next, starvation)
 
@@ -92,7 +92,7 @@ object ForagerAntActor {
             context.log.info(s"[Fourrageuse-$id] Reposée et nourrie — retour en service.")
             idle(queen, storage, id, starvation = 0)
           } else {
-            resting(queen, storage, restCycles, id, starvation = 0)
+            resting(queen, storage, id, restCycles, starvation = 0)
           }
 
         case StorageEmpty =>
