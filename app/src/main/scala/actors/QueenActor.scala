@@ -104,14 +104,16 @@ object QueenActor {
         case AntDied(antType, id) =>
           antType match {
             case Forager =>
-              SimulationLogger.logAntDied("Fourrageuse", id, foragerCount-1)
-              context.log.info(s"[Reine] Une fourrageuse est morte (id : $id). Total : ${foragerCount - 1}/$MaxPerType")
+              val total = (foragerCount - 1) max 0
+              SimulationLogger.logAntDied("Fourrageuse", id, total)
+              context.log.info(s"[Reine] Une fourrageuse est morte (id : $id). Total : $total/$MaxPerType")
               val violations = Invariants.checkPopulation(foragerCount-1, carrierCount)
               if (violations.nonEmpty) SimulationLogger.logInvariantViolation(violations)
               QueenActor(storage, hunger, (foragerCount - 1) max 0, carrierCount, foragerNextId, carrierNextId, eggs)
             case Carrier =>
-              SimulationLogger.logAntDied("Transporteuse", id, carrierCount-1)
-              context.log.info(s"[Reine] Une transporteuse est morte. Total : ${carrierCount - 1}/$MaxPerType")
+              val total = (carrierCount - 1) max 0
+              SimulationLogger.logAntDied("Transporteuse", id, total)
+              context.log.info(s"[Reine] Une transporteuse est morte. Total : $total/$MaxPerType")
               val violations = Invariants.checkPopulation(foragerCount, carrierCount-1)
               if (violations.nonEmpty) SimulationLogger.logInvariantViolation(violations)
               QueenActor(storage, hunger, foragerCount, (carrierCount - 1) max 0, foragerNextId, carrierNextId ,eggs)

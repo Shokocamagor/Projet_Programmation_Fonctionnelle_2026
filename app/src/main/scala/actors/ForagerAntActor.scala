@@ -43,6 +43,7 @@ object ForagerAntActor {
 
         case AntTick =>
           val nextStarvation = starvation + 1
+          SimulationLogger.logForagerStarving(id, nextStarvation, MaxStarvation)
           context.log.info(s"[Fourrageuse-$id] En attente — cycles sans nourriture : $nextStarvation/$MaxStarvation")
           if (nextStarvation >= MaxStarvation) {
             context.log.error(s"[Fourrageuse-$id] Morte de faim après trop de cycles sans activité.")
@@ -66,6 +67,7 @@ object ForagerAntActor {
       message match {
         case AntTick =>
           val next = restCycles - 1
+          SimulationLogger.logForagerRest(id, next)
           context.log.info(s"[Fourrageuse-$id] Au repos ($next cycles restants)  — demande nourriture au stockage.")
           storage ! ConsumeFood(context.self)
           restingWaiting(queen, storage, id, next, starvation)
@@ -95,6 +97,7 @@ object ForagerAntActor {
 
         case StorageEmpty =>
           val nextStarvation = starvation + 1
+          SimulationLogger.logForagerStarving(id, nextStarvation, MaxStarvation)
           context.log.warn(s"[Fourrageuse-$id] Pas de nourriture au repos — famine : $nextStarvation/$MaxStarvation")
           if (nextStarvation >= MaxStarvation) {
             context.log.error(s"[Fourrageuse-$id] Morte de faim.")

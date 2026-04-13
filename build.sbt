@@ -7,9 +7,18 @@ lazy val root = (project in file("."))
 
     Compile / scalaSource := baseDirectory.value / "app" / "src" / "main" / "scala",
     Compile / resourceDirectory := baseDirectory.value / "app" / "src" / "main" / "resources",
+    Test / scalaSource := baseDirectory.value / "app" / "src" / "test" / "scala",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor-typed" % "2.8.5",
       "com.typesafe.akka" %% "akka-stream" % "2.8.5",
-      "ch.qos.logback" % "logback-classic" % "1.4.11"
-    )
+      "ch.qos.logback" % "logback-classic" % "1.4.11",
+
+      // Akka TestKit typé
+      "com.typesafe.akka" %% "akka-actor-testkit-typed" % "2.8.5" % Test,
+      // ScalaTest
+      "org.scalatest" %% "scalatest" % "3.2.17" % Test,
+    ),
+
+    // Evite les warnings sur les modules Java
+    Test / fork := true,
   )
