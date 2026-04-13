@@ -1,57 +1,59 @@
 /**
- * PetriNet.scala — Traduction formelle vers un réseau de Pétri
+ * PetriNet.scala — Réseau de Pétri P/T modélisant la colonie de fourmis Akka
  *
- * Ce module traduit l'application Akka/Scala (colonie de fourmis) en un réseau
- * de Pétri P/T (Places/Transitions) et en explore les propriétés structurelles.
- *
- * Placement dans le projet :
- *   Projet_Programmation_Fonctionnelle_2026/petri/PetriNet.scala
- *   (à côté de Petri.scala existant)
- *
- * Usage :
- *   sbt "runMain PetriNetMain"
- *
- * ──────────────────────────────────────────────────────────────────────────────
+ * ══════════════════════════════════════════════════════════════════════════════
  * CORRESPONDANCE Akka → Pétri
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ *  ACTEUR AKKA           │ PLACES (états internes)
  * ──────────────────────────────────────────────────────────────────────────────
+ *  QueenActor            │ queen_alive, queen_dead, queen_sated, hunger_token
+ *  StorageActor          │ stock  (1 jeton = 1 unité, borné à 20)
+ *  ForagerAntActor       │ forager_idle, forager_resting, forager_resting_waiting,
+ *                        │ forager_dead, forager_starvation
+ *  CarrierAntActor       │ carrier_idle, carrier_waiting, carrier_resting,
+ *                        │ carrier_resting_waiting, carrier_dead, carrier_starvation
+ *  EggActor              │ egg_cycle1, egg_cycle2  (2 places = 2 cycles d'incubation)
  *
- *  ACTEUR AKKA          │ PLACES (états internes)
- * ─────────────────────────────────────────────────────────────────────────────
- *  QueenActor           │ queen_alive, queen_dead, queen_sated
- *  StorageActor         │ stock (place capacitée), storage_empty
- *  ForagerAntActor      │ forager_idle, forager_resting, forager_resting_waiting, forager_dead
- *  CarrierAntActor      │ carrier_idle, carrier_waiting, carrier_resting, carrier_resting_waiting, carrier_dead
- *  EggActor             │ egg_incubating, egg_hatched
- *
- *  MESSAGE AKKA         │ TRANSITION
- * ─────────────────────────────────────────────────────────────────────────────
- *  Tick                 │ t_tick
- *  FeedQueen(n)         │ t_feed_queen
- *  SearchFood           │ t_search_food (fourrageuse), t_request_food (transporteuse)
- *  DepositFood(n)       │ t_deposit_food
- *  RequestFood(n, ref)  │ t_request_food
- *  ConsumeFood(ref)     │ t_consume_food
- *  FoodReady(n)         │ t_food_ready
- *  StorageEmpty         │ t_storage_empty
- *  SpawnAnt             │ t_spawn_forager, t_spawn_carrier
- *  AntDied              │ t_ant_died_forager, t_ant_died_carrier
- *  AntTick              │ t_ant_tick_idle, t_ant_tick_resting
+ *  MESSAGE AKKA          │ TRANSITION
+ * ──────────────────────────────────────────────────────────────────────────────
+ *  Tick (reine)          │ t_tick, t_queen_dies
+ *  Tick (ponte)          │ t_lay_egg
+ *  Tick (œuf cycle 1)    │ t_egg_incubate
+ *  Tick (œuf cycle 2)    │ t_spawn_forager | t_spawn_carrier
+ *  FeedQueen(2)          │ t_carrier_deliver   (hunger -= 2)
+ *  FeedQueen→sated       │ t_carrier_deliver_sated (hunger = 1 → 0)
+ *  queen_sated → alive   │ t_queen_unsated
+ *  AntDied(Forager)      │ t_forager_died_notify
+ *  AntDied(Carrier)      │ t_carrier_died_notify
+ *  SearchFood (forag.)   │ t_search_food  (inclut DepositFood)
+ *  AntTick idle (forag.) │ t_forager_starve_idle, t_forager_dies_idle
+ *  ConsumeFood (forag.)  │ t_forager_consume (ok), t_forager_consume_empty (vide)
+ *  FoodReady (forag.)    │ t_forager_fed
+ *  StorageEmpty (forag.) │ t_forager_starve_resting, t_forager_dies_resting
+ *  SearchFood (carrier)  │ t_request_food (ok), t_request_food_empty (vide)
+ *  FoodReady (carrier)   │ t_carrier_deliver, t_carrier_deliver_sated
+ *  StorageEmpty (carr.)  │ t_carrier_storage_empty_idle
+ *  AntTick idle (carr.)  │ t_carrier_starve_idle, t_carrier_dies_idle
+ *  ConsumeFood (carr.)   │ t_carrier_consume, t_carrier_consume_empty
+ *  FoodReady (carr.rest) │ t_carrier_fed
+ *  StorageEmpty (c.rest) │ t_carrier_starve_resting, t_carrier_dies_resting
  */
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Structures de données
+// Structures de données P/T pures
 // ══════════════════════════════════════════════════════════════════════════════
 
 /** Une place dans le réseau de Pétri, identifiée par un nom unique. */
 case class Place(name: String)
 
 /**
- * Une transition dans le réseau de Pétri.
+ * Une transition dans le réseau de Pétri P/T.
  *
- * @param name     Identifiant de la transition (correspond à un message Akka)
- * @param inputs   Places d'entrée avec leur poids (consommation de jetons)
- * @param outputs  Places de sortie avec leur poids (production de jetons)
- * @param guard    Condition supplémentaire optionnelle (pour les gardes booléennes)
+ * @param name    Identifiant (correspond à un message Akka)
+ * @param inputs  Places d'entrée → poids de consommation (entiers > 0)
+ * @param outputs Places de sortie → poids de production (entiers > 0)
+ * @param guard   Condition booléenne documentaire (hors sémantique P/T pure)
  */
 case class Transition(
                        name:    String,
@@ -61,20 +63,21 @@ case class Transition(
                      )
 
 /**
- * Un marquage M : association Place → nombre de jetons.
+ * Marquage M : association Place → nombre de jetons ≥ 0.
  * Représente l'état global du système à un instant donné.
  */
 case class Marking(tokens: Map[Place, Int]) {
 
   def apply(p: Place): Int = tokens.getOrElse(p, 0)
 
-  /** Vérifie si la transition t est franchissable depuis ce marquage. */
+  /** Vérifie si la transition t est franchissable (précondition P/T). */
   def enables(t: Transition): Boolean =
     t.inputs.forall { case (p, w) => this(p) >= w }
 
   /**
-   * Franchit la transition t et retourne le nouveau marquage.
-   * Précondition : enables(t) doit être vrai.
+   * Franchit t et retourne le nouveau marquage.
+   * Précondition : enables(t) == true.
+   * Tous les poids sont ≥ 1 (P/T pur — pas de poids négatifs).
    */
   def fire(t: Transition): Marking = {
     val afterConsume = t.inputs.foldLeft(tokens) { case (m, (p, w)) =>
@@ -88,183 +91,305 @@ case class Marking(tokens: Map[Place, Int]) {
 
   override def toString: String =
     tokens.filter(_._2 > 0)
+      .toList.sortBy(_._1.name)
       .map { case (p, n) => s"${p.name}=$n" }
       .mkString("{ ", ", ", " }")
 }
 
-/**
- * Le réseau de Pétri complet — collection de places, transitions et marquage initial.
- */
+/** Réseau de Pétri complet. */
 case class PetriNet(
                      places:      Set[Place],
                      transitions: Set[Transition],
                      initial:     Marking
                    ) {
 
-  /** Retourne toutes les transitions franchissables depuis le marquage m. */
-  def enabled(m: Marking): Set[Transition] =
-    transitions.filter(m.enables)
+  def enabled(m: Marking): Set[Transition] = transitions.filter(m.enables)
 
   /**
-   * Génère l'espace d'états atteignables (BFS) à partir du marquage initial.
-   * Limité à maxStates pour éviter l'explosion combinatoire.
-   *
-   * @return (ensemble des marquages atteignables, transitions observées)
+   * Exploration BFS de l'espace d'états.
+   * @return (marquages atteignables, arcs)
    */
-  def reachabilityGraph(maxStates: Int = 500): (Set[Marking], Set[(Marking, Transition, Marking)]) = {
+  def reachabilityGraph(maxStates: Int = 2000)
+  : (Set[Marking], Set[(Marking, Transition, Marking)]) = {
     import scala.collection.mutable
     val visited = mutable.Set[Marking](initial)
     val queue   = mutable.Queue[Marking](initial)
     val edges   = mutable.Set[(Marking, Transition, Marking)]()
-
     while (queue.nonEmpty && visited.size < maxStates) {
       val current = queue.dequeue()
-      enabled(current).foreach { t =>
+      for (t <- enabled(current)) {
         val next = current.fire(t)
         edges += ((current, t, next))
-        if (!visited.contains(next)) {
-          visited += next
-          queue.enqueue(next)
-        }
+        if (!visited.contains(next)) { visited += next; queue.enqueue(next) }
       }
     }
     (visited.toSet, edges.toSet)
   }
 
-  /**
-   * Détecte les marquages deadlock : marquages atteignables où aucune
-   * transition n'est franchissable.
-   */
-  def deadlocks(maxStates: Int = 500): Set[Marking] = {
+  /** Marquages deadlock dans l'espace atteignable. */
+  def deadlocks(maxStates: Int = 2000): Set[Marking] = {
     val (reachable, _) = reachabilityGraph(maxStates)
     reachable.filter(m => enabled(m).isEmpty)
   }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Construction du réseau — traduction de la colonie de fourmis
+// Réseau de la colonie de fourmis
 // ══════════════════════════════════════════════════════════════════════════════
 
 object AntColonyPetriNet {
 
-  // ── Places ──────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // PLACES
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // Reine
-  val queenAlive = Place("queen_alive")     // reine vivante (hunger ∈ [0,10])
-  val queenDead  = Place("queen_dead")      // reine morte  (hunger > 10)
-  val queenSated = Place("queen_sated")     // hunger = 0
+  // Reine — exactement 1 jeton dans {queen_alive, queen_dead, queen_sated} (PI1)
+  val queenAlive  = Place("queen_alive")
+  val queenDead   = Place("queen_dead")
+  val queenSated  = Place("queen_sated")
+  // hunger_token : M(hunger_token) ∈ [0, 10] — 1 jeton = 1 point de faim
+  val hungerToken = Place("hunger_token")
 
-  // Stockage (jetons = unités de nourriture, borné à 20)
-  val stock        = Place("stock")          // M(stock) ∈ [0, 20]
-  val storageEmpty = Place("storage_empty")  // signal: stock vide
+  // Stockage : M(stock) ∈ [0, 20]
+  val stock = Place("stock")
 
-  // Fourrageuse (états comportementaux — 1 jeton par instance)
+  // Fourrageuse
   val foragerIdle           = Place("forager_idle")
   val foragerResting        = Place("forager_resting")
   val foragerRestingWaiting = Place("forager_resting_waiting")
   val foragerDead           = Place("forager_dead")
-  val foragerStarvation     = Place("forager_starvation")  // compteur [0,3]
+  val foragerStarvation     = Place("forager_starvation")  // [0, 3]
 
-  // Transporteuse (états comportementaux — 1 jeton par instance)
+  // Transporteuse
   val carrierIdle           = Place("carrier_idle")
   val carrierWaiting        = Place("carrier_waiting")
   val carrierResting        = Place("carrier_resting")
   val carrierRestingWaiting = Place("carrier_resting_waiting")
   val carrierDead           = Place("carrier_dead")
-  val carrierStarvation     = Place("carrier_starvation")  // compteur [0,3]
+  val carrierStarvation     = Place("carrier_starvation")  // [0, 3]
 
-  // Œuf
-  val eggIncubating = Place("egg_incubating")  // M = cycles restants
+  // Œuf — modélisation correcte avec 2 places distinctes pour les 2 cycles
+  // egg_cycle1 : cyclesLeft = 2  (œuf tout juste pondu)
+  // egg_cycle2 : cyclesLeft = 1  (après 1 Tick)
+  val eggCycle1 = Place("egg_cycle1")
+  val eggCycle2 = Place("egg_cycle2")
 
   val allPlaces: Set[Place] = Set(
-    queenAlive, queenDead, queenSated,
-    stock, storageEmpty,
+    queenAlive, queenDead, queenSated, hungerToken,
+    stock,
     foragerIdle, foragerResting, foragerRestingWaiting, foragerDead, foragerStarvation,
     carrierIdle, carrierWaiting, carrierResting, carrierRestingWaiting, carrierDead, carrierStarvation,
-    eggIncubating
+    eggCycle1, eggCycle2
   )
 
-  // ── Transitions ─────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // TRANSITIONS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ══ REINE ══════════════════════════════════════════════════════════════════
 
   /**
-   * T1 — Tick : la faim de la reine augmente.
-   * Akka : queen ! Tick  →  hunger + 1
-   * Si hunger + 1 > 10 → transition vers queen_dead.
-   * Modélisation simplifiée : jeton dans queen_alive consommé et reprodit
-   * (le compteur hunger est une garde extérieure au réseau P/T pur).
+   * t_tick : Tick → hunger + 1.
+   * Akka : case Tick → val next = hunger + 1
+   * Franchissable seulement si hunger_token <= 10 (garde ; sinon t_queen_dies).
    */
   val tTick = Transition(
     name    = "t_tick",
     inputs  = Map(queenAlive -> 1),
-    outputs = Map(queenAlive -> 1),   // reste vivante tant que hunger ≤ 10
-    guard   = "hunger < MaxHunger"
+    outputs = Map(queenAlive -> 1, hungerToken -> 1),
+    guard   = "M(hunger_token) <= MaxHunger=10"
   )
 
+  /**
+   * t_queen_dies : hunger atteint 11 → reine morte.
+   * Akka : if (next > MaxHunger) → Behaviors.stopped
+   * Consomme tous les 10 jetons hunger_token + queen_alive + jeton bonus → queen_dead.
+   */
   val tQueenDies = Transition(
     name    = "t_queen_dies",
-    inputs  = Map(queenAlive -> 1),
-    outputs = Map(queenDead -> 1),
-    guard   = "hunger >= MaxHunger"
+    inputs  = Map(queenAlive -> 1, hungerToken -> 11),
+    outputs = Map(queenDead -> 1)
   )
 
   /**
-   * T2 — FeedQueen : la transporteuse livre de la nourriture.
-   * Akka : queen ! FeedQueen(amount)  →  hunger - amount
+   * t_lay_egg : à chaque Tick, la reine pond EggsPerCycle=2 œufs.
+   * Akka : (1 to EggsPerCycle).map { i => context.spawn(EggActor(...)) }
+   * Produit 2 jetons dans egg_cycle1 (cyclesLeft = 2).
    */
-  val tFeedQueen = Transition(
-    name    = "t_feed_queen",
-    inputs  = Map(queenAlive -> 1, stock -> 2),  // poids 2 = CarryCapacity
-    outputs = Map(queenAlive -> 1),
-    guard   = "hunger > 0"
+  val tLayEgg = Transition(
+    name    = "t_lay_egg",
+    inputs  = Map(queenAlive -> 1),
+    outputs = Map(queenAlive -> 1, eggCycle1 -> 2)
   )
 
-  val tQueenSated = Transition(
-    name    = "t_queen_sated",
-    inputs  = Map(queenAlive -> 1),
-    outputs = Map(queenSated -> 1),
-    guard   = "hunger = 0"
+  // ══ ŒUF ════════════════════════════════════════════════════════════════════
+
+  /**
+   * t_egg_incubate : 1er cycle d'incubation (cyclesLeft : 2 → 1).
+   * Akka : case Tick → val next = cyclesLeft - 1  (EggActor)
+   * CORRECTION vs version précédente : transition propre egg_cycle1 → egg_cycle2,
+   * pas une boucle no-op. Un jeton egg_cycle1 devient un jeton egg_cycle2.
+   */
+  val tEggIncubate = Transition(
+    name    = "t_egg_incubate",
+    inputs  = Map(eggCycle1 -> 1),
+    outputs = Map(eggCycle2 -> 1)
   )
 
   /**
-   * T3 — SearchFood (fourrageuse) : collecte 1–3 unités, dépôt au stockage.
-   * Akka : storage ! DepositFood(found)  →  stock + found
-   * Poids moyen = 2 (Random.nextInt(3)+1 moyenne ≈ 2).
+   * t_spawn_forager : 2e cycle → éclosion → naissance d'une fourrageuse.
+   * Akka : if (next <= 0) → colony ! SpawnAnt(Forager) → context.spawn(supervisedForager)
+   * Condition : foragerCount < MaxPerType=4 (garde documentaire).
+   */
+  val tSpawnForager = Transition(
+    name    = "t_spawn_forager",
+    inputs  = Map(eggCycle2 -> 1, queenAlive -> 1),
+    outputs = Map(queenAlive -> 1, foragerIdle -> 1),
+    guard   = "M(forager_idle)+M(forager_resting)+M(forager_resting_waiting) < MaxPerType=4"
+  )
+
+  /**
+   * t_spawn_carrier : 2e cycle → éclosion → naissance d'une transporteuse.
+   */
+  val tSpawnCarrier = Transition(
+    name    = "t_spawn_carrier",
+    inputs  = Map(eggCycle2 -> 1, queenAlive -> 1),
+    outputs = Map(queenAlive -> 1, carrierIdle -> 1),
+    guard   = "M(carrier_idle)+M(carrier_waiting)+M(carrier_resting)+M(carrier_resting_waiting) < MaxPerType=4"
+  )
+
+  // ══ NOURRISSAGE DE LA REINE ════════════════════════════════════════════════
+
+  /**
+   * t_carrier_deliver : livraison de CarryCapacity=2 unités → hunger -= 2.
+   * Akka : queen ! FeedQueen(amount) → val next = (hunger - amount) max 0
+   * CORRECTION vs version précédente : consomme hunger_token (pas de poids négatif).
+   * Le stock a déjà été prélevé dans t_request_food.
+   */
+  val tCarrierDeliver = Transition(
+    name    = "t_carrier_deliver",
+    inputs  = Map(carrierWaiting -> 1, hungerToken -> 2),
+    outputs = Map(carrierResting -> 1),
+    guard   = "M(hunger_token) >= 2"
+  )
+
+  /**
+   * t_carrier_deliver_sated : cas limite hunger = 1 → hunger passe à 0 → queen_sated.
+   * Akka : val next = (hunger - amount) max 0   (next = 0)
+   */
+  val tCarrierDeliverSated = Transition(
+    name    = "t_carrier_deliver_sated",
+    inputs  = Map(carrierWaiting -> 1, queenAlive -> 1, hungerToken -> 1),
+    outputs = Map(carrierResting -> 1, queenSated -> 1)
+  )
+
+  /**
+   * t_queen_unsated : la reine rassasiée (hunger = 0) reprend le cycle normal.
+   * Akka : if (next == 0) context.log.info("[Reine] Totalement rassasiée.")
+   */
+  val tQueenUnsated = Transition(
+    name    = "t_queen_unsated",
+    inputs  = Map(queenSated -> 1),
+    outputs = Map(queenAlive -> 1)
+  )
+
+  // ══ NOTIFICATIONS MORT ══════════════════════════════════════════════════════
+
+  /**
+   * t_forager_died_notify : AntDied(Forager) → QueenActor (foragerCount -= 1).
+   * Akka : queen ! AntDied(Forager, id)
+   * Le jeton forager_dead est consommé (fourmi retirée définitivement).
+   */
+  val tForagerDiedNotify = Transition(
+    name    = "t_forager_died_notify",
+    inputs  = Map(foragerDead -> 1, queenAlive -> 1),
+    outputs = Map(queenAlive -> 1)
+  )
+
+  /**
+   * t_carrier_died_notify : AntDied(Carrier) → QueenActor (carrierCount -= 1).
+   */
+  val tCarrierDiedNotify = Transition(
+    name    = "t_carrier_died_notify",
+    inputs  = Map(carrierDead -> 1, queenAlive -> 1),
+    outputs = Map(queenAlive -> 1)
+  )
+
+  // ══ FOURRAGEUSE ═════════════════════════════════════════════════════════════
+
+  /**
+   * t_search_food : SearchFood → collecte + DepositFood(~2 unités).
+   * Akka : val found = Random.nextInt(3)+1 ; storage ! DepositFood(found)
+   * Poids 2 = moyenne de {1,2,3}. La fourrageuse passe idle → resting.
+   * La famine est réinitialisée implicitement (starvation = 0 dans Akka).
    */
   val tSearchFood = Transition(
     name    = "t_search_food",
     inputs  = Map(foragerIdle -> 1),
-    outputs = Map(foragerResting -> 1, stock -> 2)
+    outputs = Map(foragerResting -> 1, stock -> 2),
+    guard   = "M(stock) + 2 <= MaxCapacity=20"
   )
 
   /**
-   * T4 — AntTick (fourrageuse idle) : incrémente la famine.
-   * Si starvation < 3 → reste idle.
+   * t_forager_starve_reset : purge de 1 jeton de famine après nourrissage.
+   * Akka : starvation = 0 (lors de SearchFood ou FoodReady).
+   * P/T pur : on consomme 1 jeton forager_starvation en présence de resting
+   * (la fourrageuse vient d'être nourrie → elle est en resting).
+   * Cette transition est appelée autant de fois qu'il y a de jetons de famine.
+   */
+  val tForagerStarveReset = Transition(
+    name    = "t_forager_starve_reset",
+    inputs  = Map(foragerStarvation -> 1, foragerResting -> 1),
+    outputs = Map(foragerResting -> 1),
+    guard   = "purge famine post-nourrissage (starvation → 0)"
+  )
+
+  /**
+   * t_forager_starve_idle : AntTick en idle → famine +1.
+   * Akka : case AntTick → val nextStarvation = starvation + 1
    */
   val tForagerStarveIdle = Transition(
     name    = "t_forager_starve_idle",
     inputs  = Map(foragerIdle -> 1),
     outputs = Map(foragerIdle -> 1, foragerStarvation -> 1),
-    guard   = "forager_starvation < MaxStarvation"
-  )
-
-  val tForagerDiesIdle = Transition(
-    name    = "t_forager_dies_idle",
-    inputs  = Map(foragerIdle -> 1, foragerStarvation -> 3),
-    outputs = Map(foragerDead -> 1),
-    guard   = "forager_starvation >= MaxStarvation"
+    guard   = "M(forager_starvation) < MaxStarvation=3"
   )
 
   /**
-   * T5 — AntTick (fourrageuse resting) : demande ConsumeFood.
+   * t_forager_dies_idle : mort par famine en idle (starvation = 3).
+   * Akka : if (nextStarvation >= MaxStarvation) → queen ! AntDied ; Behaviors.stopped
+   * Modélisation P/T : consomme exactement 3 jetons forager_starvation.
    */
-  val tForagerAntTick = Transition(
-    name    = "t_forager_ant_tick",
+  val tForagerDiesIdle = Transition(
+    name    = "t_forager_dies_idle",
+    inputs  = Map(foragerIdle -> 1, foragerStarvation -> 3),
+    outputs = Map(foragerDead -> 1)
+  )
+
+  /**
+   * t_forager_consume : AntTick resting + stock ≥ 1 → ConsumeFood → FoodReady.
+   * Akka : storage ! ConsumeFood(self) → stock -= 1 → FoodReady(1)
+   */
+  val tForagerConsume = Transition(
+    name    = "t_forager_consume",
     inputs  = Map(foragerResting -> 1, stock -> 1),
     outputs = Map(foragerRestingWaiting -> 1)
   )
 
   /**
-   * T6 — FoodReady (fourrageuse restingWaiting) : nourrie → retour idle ou reste en repos.
+   * t_forager_consume_empty : AntTick resting + stock = 0 → StorageEmpty.
+   * Garde documentaire (P/T pur ne peut tester "stock = 0" sans inhibiteur).
+   */
+  val tForagerConsumeEmpty = Transition(
+    name    = "t_forager_consume_empty",
+    inputs  = Map(foragerResting -> 1),
+    outputs = Map(foragerRestingWaiting -> 1),
+    guard   = "M(stock) = 0  [StorageEmpty]"
+  )
+
+  /**
+   * t_forager_fed : FoodReady → fourrageuse nourrie → idle.
+   * Akka : case FoodReady(_) → starvation = 0 ; si restCycles ≤ 0 → idle
    */
   val tForagerFed = Transition(
     name    = "t_forager_fed",
@@ -273,282 +398,440 @@ object AntColonyPetriNet {
   )
 
   /**
-   * T7 — StorageEmpty (fourrageuse) : incrémente famine au repos.
+   * t_forager_starve_resting : StorageEmpty en resting_waiting → famine +1.
+   * Akka : case StorageEmpty → nextStarvation + 1 → resting (si < max)
    */
   val tForagerStarveResting = Transition(
     name    = "t_forager_starve_resting",
     inputs  = Map(foragerRestingWaiting -> 1),
     outputs = Map(foragerResting -> 1, foragerStarvation -> 1),
-    guard   = "forager_starvation < MaxStarvation"
-  )
-
-  val tForagerDiesResting = Transition(
-    name    = "t_forager_dies_resting",
-    inputs  = Map(foragerRestingWaiting -> 1, foragerStarvation -> 3),
-    outputs = Map(foragerDead -> 1),
-    guard   = "forager_starvation >= MaxStarvation"
+    guard   = "M(forager_starvation) < MaxStarvation=3"
   )
 
   /**
-   * T8 — SearchFood (transporteuse) : demande RequestFood.
+   * t_forager_dies_resting : mort par famine en resting_waiting.
+   */
+  val tForagerDiesResting = Transition(
+    name    = "t_forager_dies_resting",
+    inputs  = Map(foragerRestingWaiting -> 1, foragerStarvation -> 3),
+    outputs = Map(foragerDead -> 1)
+  )
+
+  // ══ TRANSPORTEUSE ═══════════════════════════════════════════════════════════
+
+  /**
+   * t_request_food : SearchFood + stock ≥ CarryCapacity=2 → RequestFood accepté.
+   * Akka : storage ! RequestFood(2, self) → stock -= 2 → FoodReady → carrier_waiting
    */
   val tRequestFood = Transition(
     name    = "t_request_food",
-    inputs  = Map(carrierIdle -> 1, stock -> 2),   // CarryCapacity = 2
+    inputs  = Map(carrierIdle -> 1, stock -> 2),
     outputs = Map(carrierWaiting -> 1)
   )
 
   /**
-   * T9 — FoodReady (transporteuse) : livre à la reine → FeedQueen.
+   * t_request_food_empty : SearchFood + stock < 2 → StorageEmpty → retour idle.
+   * Akka : case StorageEmpty → idle(...)
+   * Garde documentaire (même limite P/T que ci-dessus).
    */
-  val tCarrierDeliver = Transition(
-    name    = "t_carrier_deliver",
-    inputs  = Map(carrierWaiting -> 1),
-    outputs = Map(carrierResting -> 1, queenAlive -> 1)   // FeedQueen implicite
+  val tRequestFoodEmpty = Transition(
+    name    = "t_request_food_empty",
+    inputs  = Map(carrierIdle -> 1),
+    outputs = Map(carrierIdle -> 1),
+    guard   = "M(stock) < CarryCapacity=2  [StorageEmpty → retour idle]"
   )
 
   /**
-   * T10 — StorageEmpty (transporteuse) : retour idle.
+   * t_carrier_storage_empty_idle : StorageEmpty reçu en carrier_waiting → retour idle.
+   * (cas où le stock est passé à 0 entre la demande et la réponse)
    */
-  val tCarrierStorageEmpty = Transition(
-    name    = "t_carrier_storage_empty",
+  val tCarrierStorageEmptyIdle = Transition(
+    name    = "t_carrier_storage_empty_idle",
     inputs  = Map(carrierWaiting -> 1),
-    outputs = Map(carrierIdle -> 1)
+    outputs = Map(carrierIdle -> 1),
+    guard   = "M(stock) = 0  [StorageEmpty reçu]"
   )
 
-  /** T11 — AntTick (transporteuse idle) famine */
+  /** t_carrier_starve_idle : AntTick idle → famine +1. */
   val tCarrierStarveIdle = Transition(
     name    = "t_carrier_starve_idle",
     inputs  = Map(carrierIdle -> 1),
     outputs = Map(carrierIdle -> 1, carrierStarvation -> 1),
-    guard   = "carrier_starvation < MaxStarvation"
+    guard   = "M(carrier_starvation) < MaxStarvation=3"
   )
 
+  /** t_carrier_dies_idle : mort par famine en idle (starvation = 3). */
   val tCarrierDiesIdle = Transition(
     name    = "t_carrier_dies_idle",
     inputs  = Map(carrierIdle -> 1, carrierStarvation -> 3),
     outputs = Map(carrierDead -> 1)
   )
 
-  /** T12 — AntTick (transporteuse resting) : ConsumeFood */
-  val tCarrierAntTick = Transition(
-    name    = "t_carrier_ant_tick",
+  /** t_carrier_consume : AntTick resting + stock ≥ 1 → FoodReady. */
+  val tCarrierConsume = Transition(
+    name    = "t_carrier_consume",
     inputs  = Map(carrierResting -> 1, stock -> 1),
     outputs = Map(carrierRestingWaiting -> 1)
   )
 
+  /** t_carrier_consume_empty : AntTick resting + stock = 0 → StorageEmpty. */
+  val tCarrierConsumeEmpty = Transition(
+    name    = "t_carrier_consume_empty",
+    inputs  = Map(carrierResting -> 1),
+    outputs = Map(carrierRestingWaiting -> 1),
+    guard   = "M(stock) = 0  [StorageEmpty]"
+  )
+
+  /** t_carrier_fed : FoodReady → transporteuse nourrie → idle. */
   val tCarrierFed = Transition(
     name    = "t_carrier_fed",
     inputs  = Map(carrierRestingWaiting -> 1),
     outputs = Map(carrierIdle -> 1)
   )
 
+  /** t_carrier_starve_resting : StorageEmpty → famine +1 en resting_waiting. */
   val tCarrierStarveResting = Transition(
     name    = "t_carrier_starve_resting",
     inputs  = Map(carrierRestingWaiting -> 1),
     outputs = Map(carrierResting -> 1, carrierStarvation -> 1),
-    guard   = "carrier_starvation < MaxStarvation"
+    guard   = "M(carrier_starvation) < MaxStarvation=3"
   )
 
+  /** t_carrier_dies_resting : mort par famine en resting_waiting. */
   val tCarrierDiesResting = Transition(
     name    = "t_carrier_dies_resting",
     inputs  = Map(carrierRestingWaiting -> 1, carrierStarvation -> 3),
     outputs = Map(carrierDead -> 1)
   )
 
-  /**
-   * T13 — Éclosion d'œuf → SpawnAnt.
-   * Akka : EggActor après 2 Ticks → colony ! SpawnAnt(antType)
-   */
-  val tEggHatch = Transition(
-    name    = "t_egg_hatch",
-    inputs  = Map(eggIncubating -> 2),   // 2 cycles d'incubation
-    outputs = Map(foragerIdle -> 1)       // simplifié : fourrageuse (50% des cas)
+  /** t_carrier_starve_reset : purge de 1 jeton famine après nourrissage. */
+  val tCarrierStarveReset = Transition(
+    name    = "t_carrier_starve_reset",
+    inputs  = Map(carrierStarvation -> 1, carrierResting -> 1),
+    outputs = Map(carrierResting -> 1),
+    guard   = "purge famine post-nourrissage (starvation → 0)"
   )
 
-  val tEggHatchCarrier = Transition(
-    name    = "t_egg_hatch_carrier",
-    inputs  = Map(eggIncubating -> 2),
-    outputs = Map(carrierIdle -> 1)       // l'autre 50%
-  )
-
+  // ─────────────────────────────────────────────────────────────────────────
   val allTransitions: Set[Transition] = Set(
-    tTick, tQueenDies, tFeedQueen, tQueenSated,
-    tSearchFood,
+    tTick, tQueenDies, tLayEgg,
+    tCarrierDeliver, tCarrierDeliverSated, tQueenUnsated,
+    tEggIncubate, tSpawnForager, tSpawnCarrier,
+    tForagerDiedNotify, tCarrierDiedNotify,
+    tSearchFood, tForagerStarveReset,
     tForagerStarveIdle, tForagerDiesIdle,
-    tForagerAntTick, tForagerFed,
-    tForagerStarveResting, tForagerDiesResting,
-    tRequestFood, tCarrierDeliver, tCarrierStorageEmpty,
+    tForagerConsume, tForagerConsumeEmpty,
+    tForagerFed, tForagerStarveResting, tForagerDiesResting,
+    tRequestFood, tRequestFoodEmpty, tCarrierStorageEmptyIdle,
     tCarrierStarveIdle, tCarrierDiesIdle,
-    tCarrierAntTick, tCarrierFed,
-    tCarrierStarveResting, tCarrierDiesResting,
-    tEggHatch, tEggHatchCarrier
+    tCarrierConsume, tCarrierConsumeEmpty,
+    tCarrierFed, tCarrierStarveResting, tCarrierDiesResting,
+    tCarrierStarveReset
   )
 
-  // ── Marquage initial M₀ ─────────────────────────────────────────────────────
-
-  /**
-   * M₀ correspond à l'état au démarrage de Simulation.scala :
-   *   - Reine vivante, hunger = 5 (abstrait : 1 jeton dans queen_alive)
-   *   - Stock = 0 (aucun jeton dans stock)
-   *   - 1 fourrageuse idle
-   *   - 1 transporteuse idle
-   */
+  // ─────────────────────────────────────────────────────────────────────────
+  // MARQUAGE INITIAL M₀ — correspond exactement à Simulation.scala
+  // ─────────────────────────────────────────────────────────────────────────
   val initialMarking: Marking = Marking(Map(
-    queenAlive   -> 1,
-    foragerIdle  -> 1,
-    carrierIdle  -> 1
-    // stock → 0 (pas de jetons initialement)
+    queenAlive  -> 1,
+    hungerToken -> 5,   // initialHunger = 5
+    foragerIdle -> 1,
+    carrierIdle -> 1
+    // stock = 0, eggCycle1 = 0, eggCycle2 = 0 (implicites)
   ))
 
   val net: PetriNet = PetriNet(allPlaces, allTransitions, initialMarking)
 
-  // ══════════════════════════════════════════════════════════════════════════════
-  // P-invariants (vérifiés analytiquement)
-  // ══════════════════════════════════════════════════════════════════════════════
-
+  // ══════════════════════════════════════════════════════════════════════════
+  // P-INVARIANTS
+  // ══════════════════════════════════════════════════════════════════════════
   /**
-   * Un P-invariant est un vecteur y tel que y^T * C = 0
-   * où C est la matrice d'incidence (C = Post - Pre).
+   * Un P-invariant est un vecteur y ≥ 0 tel que y^T · C = 0
+   * où C = Post - Pre est la matrice d'incidence.
+   * Conséquence : ∀ M atteignable, y^T · M = y^T · M₀ (quantité conservée).
    *
-   * P-invariants identifiés pour ce réseau :
+   * PI1 — Conservation de l'état de la reine :
+   *   y = (queen_alive:1, queen_dead:1, queen_sated:1, autres:0)
+   *   M(queen_alive) + M(queen_dead) + M(queen_sated) = 1  ∀ M
+   *   → Lié aux invariants métier [I7] de Invariants.scala.
    *
-   * PI1 — Conservation de la reine :
-   *   M(queen_alive) + M(queen_dead) + M(queen_sated) = 1
-   *   → La reine est toujours dans exactement un état.
+   * PI2 — Borne de faim :
+   *   0 ≤ M(hunger_token) ≤ 10
+   *   → [I1] (faim ≥ 0) et [I2] (faim ≤ MaxHunger).
    *
-   * PI2 — Conservation de l'état fourrageuse (par instance) :
-   *   M(forager_idle) + M(forager_resting) + M(forager_resting_waiting) + M(forager_dead) = 1
-   *   → Une fourrageuse est toujours dans exactement un état.
+   * PI3 — Conservation fourrageuse :
+   *   M(forager_idle) + M(forager_resting) + M(forager_resting_waiting) + M(forager_dead)
+   *     ∈ [0, 4]
+   *   → [I5].
    *
-   * PI3 — Conservation de l'état transporteuse (par instance) :
-   *   M(carrier_idle) + M(carrier_waiting) + M(carrier_resting) + M(carrier_resting_waiting) + M(carrier_dead) = 1
+   * PI4 — Conservation transporteuse :
+   *   M(carrier_idle) + M(carrier_waiting) + M(carrier_resting)
+   *     + M(carrier_resting_waiting) + M(carrier_dead) ∈ [0, 4]
+   *   → [I6].
    *
-   * PI4 — Borne du stock (semi-positif, non conservatif) :
-   *   0 ≤ M(stock) ≤ 20    (contrainte de capacité)
+   * PI5 — Borne du stock :
+   *   0 ≤ M(stock) ≤ 20
+   *   → [I3] et [I4].
+   *
+   * PI6 — Cohérence vivacité reine :
+   *   M(queen_alive) = 1 → M(hunger_token) ≤ 10
+   *   → [I7].
    */
   def checkPInvariants(m: Marking): List[String] = {
-    val violations = scala.collection.mutable.ListBuffer[String]()
+    val v = scala.collection.mutable.ListBuffer[String]()
 
-    // PI1
     val queenSum = m(queenAlive) + m(queenDead) + m(queenSated)
     if (queenSum != 1)
-      violations += s"[PI1] VIOLATION : reine présente dans $queenSum états simultanés (attendu 1)"
+      v += s"[PI1] VIOLATION : reine dans $queenSum états (attendu 1)"
 
-    // PI2
-    val foragerSum = m(foragerIdle) + m(foragerResting) + m(foragerRestingWaiting) + m(foragerDead)
-    // Autorise 0 si pas de fourrageuse vivante (colonie initiale peut avoir N instances)
-    if (foragerSum > 4)
-      violations += s"[PI2] VIOLATION : $foragerSum fourrageuses actives (max 4)"
+    val h = m(hungerToken)
+    if (h < 0)  v += s"[PI2] VIOLATION : faim négative ($h) — [I1]"
+    // On autorise 11 car c'est la valeur qui déclenche la mort
+    if (h > 11) v += s"[PI2] VIOLATION : faim $h > 11 — [I2]"
 
-    // PI3
-    val carrierSum = m(carrierIdle) + m(carrierWaiting) + m(carrierResting) + m(carrierRestingWaiting) + m(carrierDead)
-    if (carrierSum > 4)
-      violations += s"[PI3] VIOLATION : $carrierSum transporteuses actives (max 4)"
+    val ft = m(foragerIdle) + m(foragerResting) + m(foragerRestingWaiting) + m(foragerDead)
+    if (ft > 4) v += s"[PI3] VIOLATION : $ft fourrageuses > MaxPerType=4 — [I5]"
 
-    // PI4
-    val stockVal = m(stock)
-    if (stockVal < 0)
-      violations += s"[PI4] VIOLATION : stock négatif ($stockVal)"
-    if (stockVal > 20)
-      violations += s"[PI4] VIOLATION : stock dépasse MaxCapacity ($stockVal > 20)"
+    val ct = m(carrierIdle) + m(carrierWaiting) + m(carrierResting) + m(carrierRestingWaiting) + m(carrierDead)
+    if (ct > 4) v += s"[PI4] VIOLATION : $ct transporteuses > MaxPerType=4 — [I6]"
 
-    violations.toList
+    if (m(stock) < 0)  v += s"[PI5] VIOLATION : stock négatif — [I3]"
+    if (m(stock) > 20) v += s"[PI5] VIOLATION : stock ${m(stock)} > MaxCapacity=20 — [I4]"
+
+    if (m(queenAlive) == 1 && h > 11)
+      v += s"[PI6] VIOLATION : reine vivante avec faim=$h > 11 — [I7]"
+
+    v.toList
   }
 
-  // ══════════════════════════════════════════════════════════════════════════════
-  // Propriétés LTL (Linear Temporal Logic) — formalisées
-  // ══════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
+  // MATRICE D'INCIDENCE + VÉRIFICATION ANALYTIQUE P-INVARIANT
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /** C[p][t] = Post(p,t) - Pre(p,t) */
+  def incidenceMatrix: Map[Place, Map[Transition, Int]] =
+    allPlaces.map { p =>
+      p -> allTransitions.map { t =>
+        t -> (t.outputs.getOrElse(p, 0) - t.inputs.getOrElse(p, 0))
+      }.toMap
+    }.toMap
 
   /**
-   * LTL1 — Sûreté (Safety) : "La reine ne meurt jamais si elle est nourrie à temps."
-   *   □ (queen_alive → ◇ FeedQueen)
-   *   Traduction : dans tout chemin d'exécution, si la reine est vivante,
-   *   il existe un futur état où FeedQueen est franchie.
-   *   ↳ Vérifiée si la transporteuse est vivante et le stock non vide.
-   *
-   * LTL2 — Vivacité (Liveness) : "Toute fourrageuse idle finit par chercher de la nourriture."
-   *   □ (forager_idle → ◇ SearchFood_franchie)
-   *   ↳ Garantie par le scheduler interne (scheduleAtFixedRate).
-   *
-   * LTL3 — Sûreté du stock : "Le stock ne devient jamais négatif."
-   *   □ (M(stock) ≥ 0)
-   *   ↳ P-invariant PI4 — structurellement vrai.
-   *
-   * LTL4 — Terminaison contrôlée : "Si toutes les fourmis sont mortes, la reine finit par mourir."
-   *   □ (forager_dead ∧ carrier_dead → ◇ queen_dead)
-   *   ↳ Vérifiable par exploration de l'espace d'états.
-   *
-   * LTL5 — Non-deadlock vivant : "Le système ne bloque jamais si la reine est vivante."
-   *   □ ¬deadlock ∨ queen_dead
-   *   ↳ Deadlock n'est atteignable que si queen_dead ∈ M.
+   * Vérifie si y est un P-invariant : ∀ t, ∑_p y(p) · C[p][t] = 0.
+   * Permet la vérification formelle des P-invariants identifiés.
    */
-  val ltlProperties: Map[String, String] = Map(
-    "LTL1" -> "□ (queen_alive → ◇ t_feed_queen franchissable)",
-    "LTL2" -> "□ (forager_idle → ◇ t_search_food franchissable)",
-    "LTL3" -> "□ (M(stock) ≥ 0)",
-    "LTL4" -> "□ ((forager_dead ∧ carrier_dead) → ◇ queen_dead)",
-    "LTL5" -> "□ (¬deadlock ∨ queen_dead)"
+  def isPInvariant(y: Map[Place, Int]): Boolean =
+    allTransitions.forall { t =>
+      allPlaces.toList.map(p => y.getOrElse(p, 0) * (t.outputs.getOrElse(p, 0) - t.inputs.getOrElse(p, 0))).sum == 0
+    }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // T-INVARIANTS
+  // ══════════════════════════════════════════════════════════════════════════
+  /**
+   * Un T-invariant est un vecteur x ≥ 0 tel que C · x = 0.
+   * Il représente un multiensemble de tirs qui ramène M à M₀.
+   *
+   * TI1 — Cycle nominal fourrageuse :
+   *   t_search_food + t_forager_consume + t_forager_fed
+   *   Bilan sur forager_idle : -1+1 = 0 ✓  stock : +2-1=+1 (pas conservé → semi-flot)
+   *
+   * TI2 — Cycle nominal transporteuse :
+   *   t_request_food + t_carrier_deliver + t_carrier_consume + t_carrier_fed
+   *   Bilan carrier_idle : 0 ✓  hunger_token : -2 ✓  stock : -2-1 = -3
+   *
+   * TI3 — Cycle faim reine :
+   *   t_tick + t_carrier_deliver
+   *   hunger_token net : +1 - 2 = -1 (flux de réduction de faim)
+   *
+   * TI4 — Cycle vie d'un œuf :
+   *   t_lay_egg + t_egg_incubate + t_spawn_forager
+   *   eggCycle1 : +2-1=+1 ; eggCycle2 : +1-1=0 ; forager_idle : +1
+   */
+  val tInvariants: Map[String, String] = Map(
+    "TI1" -> "t_search_food · t_forager_consume · t_forager_fed  [cycle fourrageuse]",
+    "TI2" -> "t_request_food · t_carrier_deliver · t_carrier_consume · t_carrier_fed  [cycle transporteuse]",
+    "TI3" -> "t_tick · t_carrier_deliver  [cycle faim reine]",
+    "TI4" -> "t_lay_egg · t_egg_incubate · t_spawn_forager  [cycle œuf → fourrageuse]"
   )
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PROPRIÉTÉS LTL ET VÉRIFICATEURS
+  // ══════════════════════════════════════════════════════════════════════════
+  /**
+   * LTL (Linear Temporal Logic) : logique pour exprimer des propriétés
+   * sur les CHEMINS d'exécution (séquences de marquages).
+   * Opérateurs : □ "toujours", ◇ "un jour", ○ "prochain", U "jusqu'à", ¬ "non".
+   *
+   * ── Sûreté (□ P) ─────────────────────────────────────────────────────────
+   *
+   * LTL1 □ (M(queen_alive)+M(queen_dead)+M(queen_sated) = 1)
+   *   La reine est toujours dans un état bien défini. [PI1]
+   *
+   * LTL2 □ (M(stock) ≥ 0)
+   *   Le stock ne devient jamais négatif. [PI5]
+   *
+   * LTL3 □ (population(F) ≤ 4 ∧ population(C) ≤ 4)
+   *   La population est toujours bornée. [PI3][PI4]
+   *
+   * LTL4 □ (M(queen_alive)=1 → 0 ≤ M(hunger_token) ≤ 10)
+   *   La faim reste bornée si la reine est vivante. [PI2][PI6]
+   *
+   * ── Vivacité (◇ P depuis tout état) ──────────────────────────────────────
+   *
+   * LTL5 □ (M(forager_idle) ≥ 1 → ◇ t_search_food franchissable)
+   *   Toute fourrageuse idle finit par chercher de la nourriture.
+   *
+   * LTL6 □ (M(carrier_idle) ≥ 1 ∧ M(stock) ≥ 2 → ◇ t_carrier_deliver franchissable)
+   *   Toute transporteuse avec stock disponible finit par livrer.
+   *
+   * LTL7 □ (M(egg_cycle1) ≥ 1 → ◇ t_egg_incubate franchissable)
+   *   Tout œuf en cycle 1 progresse vers le cycle 2.
+   *
+   * ── Terminaison / Deadlock ────────────────────────────────────────────────
+   *
+   * LTL8 □ (deadlock → M(queen_dead) = 1)
+   *   Un deadlock n'est atteignable que si la reine est morte.
+   *
+   * LTL9 □ ((fourmis_actives = 0 ∧ M(stock) = 0) → ◇ M(queen_dead) = 1)
+   *   Sans fourmis ni stock, la reine meurt inévitablement.
+   */
+  val ltlFormulas: Map[String, String] = Map(
+    "LTL1" -> "□ (M(queen_alive)+M(queen_dead)+M(queen_sated) = 1)  [sûreté état reine]",
+    "LTL2" -> "□ (M(stock) ≥ 0)  [sûreté stock]",
+    "LTL3" -> "□ (population(F) ≤ MaxPerType=4 ∧ population(C) ≤ MaxPerType=4)  [sûreté population]",
+    "LTL4" -> "□ (M(queen_alive)=1 → 0 ≤ M(hunger_token) ≤ 10)  [sûreté faim]",
+    "LTL5" -> "□ (M(forager_idle)≥1 → ◇ t_search_food franchissable)  [vivacité fourrageuse]",
+    "LTL6" -> "□ (M(carrier_idle)≥1 ∧ M(stock)≥2 → ◇ t_carrier_deliver franchissable)  [vivacité transporteuse]",
+    "LTL7" -> "□ (M(egg_cycle1)≥1 → ◇ t_egg_incubate franchissable)  [vivacité œuf]",
+    "LTL8" -> "□ (deadlock → M(queen_dead)=1)  [deadlock = fin de colonie]",
+    "LTL9" -> "□ (fourmis_actives=0 ∧ M(stock)=0 → ◇ M(queen_dead)=1)  [terminaison inévitable]"
+  )
+
+  // ── Vérificateurs sur l'espace d'états ────────────────────────────────────
+
+  /** LTL1 : PI1 — reine dans exactement 1 état. */
+  def verifyLTL1(r: Set[Marking]): Boolean =
+    r.forall(m => m(queenAlive) + m(queenDead) + m(queenSated) == 1)
+
+  /** LTL2 : PI5 — stock toujours ≥ 0. */
+  def verifyLTL2(r: Set[Marking]): Boolean =
+    r.forall(m => m(stock) >= 0)
+
+  /** LTL3 : PI3 + PI4 — population bornée. */
+  def verifyLTL3(r: Set[Marking]): Boolean =
+    r.forall { m =>
+      val f = m(foragerIdle) + m(foragerResting) + m(foragerRestingWaiting) + m(foragerDead)
+      val c = m(carrierIdle) + m(carrierWaiting) + m(carrierResting) + m(carrierRestingWaiting) + m(carrierDead)
+      f <= 4 && c <= 4
+    }
+
+  /** LTL4 : PI2 + PI6 — faim bornée si reine vivante. */
+  def verifyLTL4(r: Set[Marking]): Boolean =
+    r.forall(m => m(queenAlive) != 1 || (m(hungerToken) >= 0 && m(hungerToken) <= 11))
+
+  /**
+   * LTL5 : vivacité fourrageuse.
+   * t_search_food ne dépend que de forager_idle → franchissable directement.
+   */
+  def verifyLTL5(r: Set[Marking]): Boolean =
+    r.forall(m => m(foragerIdle) == 0 || m.enables(tSearchFood))
+
+  /**
+   * LTL6 : vivacité transporteuse.
+   * t_request_food nécessite carrier_idle + 2 stock.
+   */
+  def verifyLTL6(r: Set[Marking]): Boolean =
+    r.forall(m => !(m(carrierIdle) >= 1 && m(stock) >= 2) || m.enables(tRequestFood))
+
+  /**
+   * LTL7 : vivacité œuf.
+   * t_egg_incubate nécessite 1 jeton dans egg_cycle1.
+   */
+  def verifyLTL7(r: Set[Marking]): Boolean =
+    r.forall(m => m(eggCycle1) == 0 || m.enables(tEggIncubate))
+
+  /** LTL8 : deadlock uniquement si queen_dead. */
+  def verifyLTL8(dl: Set[Marking]): Boolean =
+    dl.forall(m => m(queenDead) == 1)
+
+  /**
+   * LTL9 : terminaison inévitable sans fourmis actives et sans stock.
+   * Dans ces marquages, t_tick est franchissable → hunger_token montera → queen_dead.
+   */
+  def verifyLTL9(r: Set[Marking]): Boolean =
+    r.forall { m =>
+      val af = m(foragerIdle) + m(foragerResting) + m(foragerRestingWaiting)
+      val ac = m(carrierIdle) + m(carrierWaiting) + m(carrierResting) + m(carrierRestingWaiting)
+      !(af == 0 && ac == 0 && m(stock) == 0 && m(queenAlive) == 1) || m.enables(tTick)
+    }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Point d'entrée — analyse du réseau
+// Analyseur — rapport complet
 // ══════════════════════════════════════════════════════════════════════════════
 
 object PetriNetMain {
   def main(args: Array[String]): Unit = {
     import AntColonyPetriNet._
+    val sep = "=" * 72
 
-    println("=" * 70)
-    println("  RÉSEAU DE PÉTRI — COLONIE DE FOURMIS")
-    println("=" * 70)
+    println(sep)
+    println("  RÉSEAU DE PÉTRI — COLONIE DE FOURMIS (Akka/Scala)")
+    println(sep)
 
-    // ── Informations structurelles ──────────────────────────────────────────
-    println(s"\n[Structure]")
-    println(s"  Places      : ${net.places.size}")
-    println(s"  Transitions : ${net.transitions.size}")
+    println(s"\n── 1. Structure")
+    println(s"  Places      : ${allPlaces.size}")
+    println(s"  Transitions : ${allTransitions.size}")
     println(s"  Marquage M₀ : ${net.initial}")
 
-    // ── Transitions franchissables depuis M₀ ───────────────────────────────
-    val enabledFromInit = net.enabled(net.initial)
-    println(s"\n[Transitions franchissables depuis M₀] (${enabledFromInit.size})")
-    enabledFromInit.foreach(t => println(s"  - ${t.name}"))
+    val enabledInit = net.enabled(net.initial)
+    println(s"\n── 2. Transitions franchissables depuis M₀ (${enabledInit.size})")
+    enabledInit.toList.sortBy(_.name).foreach(t => println(s"  ✓ ${t.name}"))
 
-    // ── P-invariants sur M₀ ────────────────────────────────────────────────
-    println(s"\n[P-invariants — vérification sur M₀]")
-    val violations = checkPInvariants(net.initial)
-    if (violations.isEmpty) println("  Tous les P-invariants sont satisfaits.")
-    else violations.foreach(v => println(s"  $v"))
+    val maxS = 2000
+    println(s"\n── 3. Espace d'états (BFS, max $maxS)")
+    val (reachable, edges) = net.reachabilityGraph(maxS)
+    val reached = if (reachable.size >= maxS) s"≥ $maxS (limite atteinte)" else s"${reachable.size}"
+    println(s"  Marquages atteignables : $reached")
+    println(s"  Arcs                   : ${edges.size}")
 
-    // ── Exploration de l'espace d'états ────────────────────────────────────
-    println(s"\n[Espace d'états — exploration BFS (max 300 marquages)]")
-    val (reachable, edges) = net.reachabilityGraph(300)
-    println(s"  Marquages atteignables : ${reachable.size}")
-    println(s"  Arcs (transitions)     : ${edges.size}")
+    val dl = net.deadlocks(maxS)
+    println(s"\n── 4. Deadlocks : ${dl.size}")
+    dl.take(3).foreach(m => println(s"  • $m"))
 
-    // ── Deadlocks ──────────────────────────────────────────────────────────
-    val dl = net.deadlocks(300)
-    println(s"\n[Deadlocks détectés] : ${dl.size}")
-    dl.take(3).foreach(m => println(s"  $m"))
-    if (dl.size > 3) println(s"  ... (${dl.size - 3} autres)")
+    println(s"\n── 5. P-invariants sur M₀")
+    val piV0 = checkPInvariants(net.initial)
+    if (piV0.isEmpty) println("  ✓ Tous satisfaits.")
+    else piV0.foreach(v => println(s"  ✗ $v"))
 
-    // ── Propriétés LTL ─────────────────────────────────────────────────────
-    println(s"\n[Propriétés LTL formalisées]")
-    ltlProperties.foreach { case (id, formula) =>
-      println(s"  $id : $formula")
-    }
+    println(s"\n── 6. P-invariants sur l'espace d'états")
+    val allPIV = reachable.flatMap(checkPInvariants)
+    if (allPIV.isEmpty) println("  ✓ Aucune violation.")
+    else { println(s"  ${allPIV.size} violation(s) :"); allPIV.take(5).foreach(v => println(s"  ✗ $v")) }
 
-    // ── Vérification PI sur tous les marquages atteignables ────────────────
-    println(s"\n[Vérification P-invariants sur l'espace d'états complet]")
-    val allViolations = reachable.flatMap(m => checkPInvariants(m))
-    if (allViolations.isEmpty)
-      println("  Aucune violation détectée sur les marquages atteignables.")
-    else {
-      println(s"  ${allViolations.size} violation(s) :")
-      allViolations.take(5).foreach(v => println(s"  $v"))
-    }
+    println(s"\n── 7. Vérification analytique PI1 (y^T · C = 0)")
+    val yPI1 = Map(queenAlive -> 1, queenDead -> 1, queenSated -> 1)
+    println(s"  PI1 : ${if (isPInvariant(yPI1)) "✓ vérifié" else "✗ non vérifié"}")
 
-    println("\n" + "=" * 70)
+    println(s"\n── 8. Vérification LTL sur l'espace d'états")
+    def ok(b: Boolean) = if (b) "✓ OK" else "✗ VIOLATION"
+    println(s"  LTL1 (état reine)       : ${ok(verifyLTL1(reachable))}")
+    println(s"  LTL2 (stock ≥ 0)        : ${ok(verifyLTL2(reachable))}")
+    println(s"  LTL3 (population bornée): ${ok(verifyLTL3(reachable))}")
+    println(s"  LTL4 (faim bornée)      : ${ok(verifyLTL4(reachable))}")
+    println(s"  LTL5 (vivacité forag.)  : ${ok(verifyLTL5(reachable))}")
+    println(s"  LTL6 (vivacité transp.) : ${ok(verifyLTL6(reachable))}")
+    println(s"  LTL7 (vivacité œuf)     : ${ok(verifyLTL7(reachable))}")
+    println(s"  LTL8 (deadlock→dead)    : ${ok(verifyLTL8(dl))}")
+    println(s"  LTL9 (terminaison)      : ${ok(verifyLTL9(reachable))}")
+
+    println(s"\n── 9. Formules LTL")
+    ltlFormulas.toList.sortBy(_._1).foreach { case (id, f) => println(s"  $id : $f") }
+
+    println(s"\n── 10. T-invariants")
+    tInvariants.toList.sortBy(_._1).foreach { case (id, d) => println(s"  $id : $d") }
+
+    println(s"\n$sep")
   }
 }

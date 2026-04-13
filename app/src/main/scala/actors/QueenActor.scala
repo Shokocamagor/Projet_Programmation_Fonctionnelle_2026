@@ -8,12 +8,29 @@ import simulation.SimulationLogger
 
 import java.util.UUID
 
+/**
+ * QueenActor — L'acteur central de la colonie.
+ * * RÔLES :
+ * 1. Gestion du cycle de vie : Pond des œufs et gère leur progression.
+ * 2. Régulation de la population : Assure que le nombre de fourmis ne dépasse pas MaxPerType.
+ * 3. Survie : Doit être nourrie par les transporteuses pour ne pas mourir de faim.
+ * 4. Monitoring : Vérifie les invariants du domaine à chaque cycle.
+ */
 object QueenActor {
 
   val MaxHunger:    Int = Invariants.MaxHunger
   val EggsPerCycle: Int = 2
   val MaxPerType:   Int = Invariants.MaxPerType
 
+  /**
+   * @param storage       Référence vers l'acteur de stockage.
+   * @param hunger        Niveau de faim actuel (augmente avec le temps).
+   * @param foragerCount  Nombre actuel de fourrageuses vivantes.
+   * @param carrierCount  Nombre actuel de transporteuses vivantes.
+   * @param foragerNextId Compteur pour attribuer un ID unique aux nouvelles fourrageuses.
+   * @param carrierNextId Compteur pour attribuer un ID unique aux nouvelles transporteuses.
+   * @param eggs          Liste des ActorRef des œufs actuellement en incubation.
+   */
   def apply(
              storage:      ActorRef[Command],
              hunger:       Int = 5,
@@ -32,6 +49,7 @@ object QueenActor {
           SimulationLogger.logQueenTick(hunger, next)
           context.log.info(s"[Reine] Cycle suivant — état de faim : $hunger → $next")
 
+          // Vérification des règles métier (Invariants)
           val violations = Invariants.checkQueen(next)
           if (violations.nonEmpty) {
             violations.foreach(v => context.log.warn(s"[Invariant] $v"))
@@ -53,6 +71,8 @@ object QueenActor {
               context.log.info(s"[Reine] Œuf pondu.")
               egg
             }.toList
+
+            // Mise à jour de l'état de la reine (Hunger + nouveaux œufs)
             QueenActor(storage, next, foragerCount, carrierCount, foragerNextId, carrierNextId,  eggs ++ newEggs)
           }
 

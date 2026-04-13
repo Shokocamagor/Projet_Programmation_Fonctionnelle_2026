@@ -9,16 +9,6 @@ import scala.concurrent.duration._
 /**
  * ColonyGuardianActor — Superviseur racine de la colonie.
  *
- * ──────────────────────────────────────────────────────────────────────────────
- * POURQUOI UN SUPERVISEUR ?
- * ──────────────────────────────────────────────────────────────────────────────
- * La consigne exige "supervision, tolérance aux pannes". En Akka Typed, la
- * supervision est définie via `Behaviors.supervise(...).onFailure(...)` au
- * moment du spawn d'un acteur enfant.
- *
- * Sans superviseur, une exception non gérée dans un acteur le tue silencieusement.
- * Avec un superviseur, on choisit la stratégie de récupération :
- *
  *   - SupervisorStrategy.restart  → relance l'acteur (état réinitialisé)
  *   - SupervisorStrategy.stop     → arrête définitivement (défaut Akka Typed)
  *   - SupervisorStrategy.resume   → ignore l'exception, continue (Akka Classic)

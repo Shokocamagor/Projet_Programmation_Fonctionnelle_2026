@@ -8,17 +8,29 @@ import simulation.SimulationLogger
 
 import scala.concurrent.duration._
 
+/**
+ * CarrierAntActor — Acteur représentant une fourmi transporteuse.
+ * * RÔLE :
+ * Faire la navette entre le stockage et la reine pour la nourrir.
+ * Elle gère également sa propre survie (famine) et ses cycles de repos.
+ * * MACHINE À ÉTATS (FSM) :
+ * 1. idle           : Attend le signal pour chercher de la nourriture.
+ * 2. waiting        : Attend que le stockage réponde à sa demande.
+ * 3. resting        : Se repose après une livraison réussie.
+ * 4. restingWaiting : Attend d'être nourrie par le stockage pendant son repos.
+ */
 object CarrierAntActor {
 
+  // Paramètres de simulation
   val CarryCapacity: Int = 2 // la quantité que la transporteuse peut transporter à la fois
   val RestDuration: Int  = 1 // nombre de cycles de repos après une livraison
   val MaxStarvation: Int = 3 // nombre de cycles sans livraison avant de mourir de faim
 
   def apply(queen: ActorRef[Command], storage: ActorRef[Command], id: Int): Behavior[Command] =
     Behaviors.setup { context =>
-      context.watch(queen)
+      context.watch(queen) // Surveillance : si la reine meurt, la transporteuse s'arrête (Terminated)
       context.log.info(s"[Transporteuse-$id] Prête.")
-      // Scheduler interne — la transporteuse s'envoie ses propres ordres
+      // PLANIFICATION DES ÉVÉNEMENTS
       context.system.scheduler.scheduleAtFixedRate(2.seconds, 2.seconds)( // la transporteuse tente une livraison toutes les 2 secondes
         () => context.self ! SearchFood
       )(context.executionContext)
@@ -28,6 +40,9 @@ object CarrierAntActor {
       idle(queen, storage, id, starvation = 0)
     }
 
+  /**
+   * État IDLE : La fourmi attend son prochain cycle de travail ou surveille sa faim.
+   */
   private def idle(queen: ActorRef[Command], storage: ActorRef[Command], id: Int, starvation: Int): Behavior[Command] =
     Behaviors.receive[Command] { (context, message) =>
       message match {
@@ -56,7 +71,9 @@ object CarrierAntActor {
         Behaviors.stopped
     }
 
-  // Attend la réponse du stockage
+  /**
+   * État WAITING : La fourmi a fait une demande au stock et attend de savoir s'il y a de la nourriture.
+   */
   private def waiting(queen: ActorRef[Command], storage: ActorRef[Command], id: Int, starvation: Int): Behavior[Command] =
     Behaviors.receive[Command] { (context, message) =>
       message match {
@@ -79,6 +96,9 @@ object CarrierAntActor {
         Behaviors.stopped
     }
 
+  /**
+   * État RESTING : La fourmi a fini son travail et doit consommer de la nourriture pour elle-même.
+   */
   private def resting(queen: ActorRef[Command], storage: ActorRef[Command], id: Int, restCycles: Int, starvation: Int): Behavior[Command] =
     Behaviors.receive[Command] { (context, message) =>
       message match {
@@ -96,6 +116,9 @@ object CarrierAntActor {
         Behaviors.stopped
     }
 
+  /**
+   * État RESTING_WAITING : Attend de savoir si elle a pu manger pendant son repos.
+   */
   private def restingWaiting(queen: ActorRef[Command], storage: ActorRef[Command], id: Int ,restCycles: Int, starvation: Int): Behavior[Command] =
     Behaviors.receive[Command] { (context, message) =>
       message match {

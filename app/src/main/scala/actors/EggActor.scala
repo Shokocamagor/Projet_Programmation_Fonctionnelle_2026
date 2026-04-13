@@ -7,6 +7,17 @@ import simulation.SimulationLogger
 
 import scala.util.Random
 
+/**
+ * EggActor — Gère le cycle de développement d'un futur membre de la colonie.
+ * * RÔLE :
+ * Simuler la période d'incubation. L'œuf ne fait rien d'autre qu'attendre
+ * que le temps passe (via le message Tick) avant de se transformer en fourmi.
+ * * CYCLE DE VIE :
+ * 1. Création par la Reine.
+ * 2. Incubation (pendant un nombre défini de cycles).
+ * 3. Éclosion (choix aléatoire du métier).
+ * 4. Arrêt (Behaviors.stopped).
+ */
 object EggActor {
 
   def apply(
@@ -16,6 +27,10 @@ object EggActor {
            ): Behavior[Command] =
     incubating(queen, storage, colony, cyclesLeft = 2)
 
+  /**
+   * État INCUBATING : L'œuf attend les signaux de temps (Tick).
+   * * @param cyclesLeft Nombre de Ticks restants avant l'éclosion.
+   */
   private def incubating(
                           queen:      ActorRef[Command],
                           storage:    ActorRef[Command],
@@ -32,11 +47,11 @@ object EggActor {
             SimulationLogger.logEggHatched(antType.toString)
             context.log.info(s"[Œuf] Éclosion ! Type : $antType")
             colony ! SpawnAnt(antType)
-            Behaviors.stopped
+            Behaviors.stopped // L'œuf disparaît du système car il est devenu une fourmi
           } else {
             incubating(queen, storage, colony, next)
           }
-        case _ => Behaviors.same
+        case _ => Behaviors.same // L'œuf ignore les autres messages (comme SearchFood ou FeedQueen)
       }
     }
 }

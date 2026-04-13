@@ -6,14 +6,28 @@ import domain.Invariants
 import protocol._
 import simulation.SimulationLogger
 
+/**
+ * StorageActor — Gestionnaire des ressources de la colonie.
+ * * RÔLE :
+ * Centraliser la nourriture, limiter la capacité maximale et répondre aux requêtes
+ * de prélèvement ou de dépôt.
+ * * CONCURRENCE :
+ * Grâce au modèle d'acteur, les dépôts et retraits sont sérialisés, ce qui évite
+ * tout problème de "race condition" (conflit d'accès) sur la variable du stock.
+ */
 object StorageActor {
 
+  // Capacité maximale définie dans les invariants du domaine
   val MaxCapacity: Int = Invariants.MaxCapacity
 
+  /**
+   * @param stock Quantité actuelle de nourriture en réserve.
+   */
   def apply(stock: Int = 0): Behavior[Command] =
     Behaviors.receive { (context, message) =>
       message match {
 
+        // Dépôt de nourriture envoyé par les fourrageuses: on ajoute au stock, en respectant la capacité maximale
         case DepositFood(amount) =>
           val next = (stock + amount) min MaxCapacity
           SimulationLogger.logStorageDeposit(amount, stock, next)
@@ -25,6 +39,7 @@ object StorageActor {
           }
           StorageActor(next)
 
+        // Requête de nourriture envoyée par les transporteuses: on fournit jusqu'à "max" unités, ou moins si le stock est insuffisant
         case RequestFood(max, replyTo) =>
           if (stock > 0) {
             val given = stock min max
@@ -41,6 +56,7 @@ object StorageActor {
             StorageActor(stock)
           }
 
+        // Requête de consommation envoyée par les fourmis au repos: on fournit 1 unité si disponible, sinon on répond que le stock est vide
         case ConsumeFood(replyTo) =>
           if (stock > 0) {
             SimulationLogger.logStorageProvide(1, stock, stock - 1, replyTo.path.name)

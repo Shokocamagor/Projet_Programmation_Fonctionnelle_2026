@@ -10,6 +10,15 @@ import simulation.SimulationLogger
 
 import scala.concurrent.duration._
 
+/**
+ * ForagerAntActor — Acteur représentant une fourmi fourrageuse.
+ * * RÔLE :
+ * Explorer l'environnement pour trouver de la nourriture et la rapporter au stock.
+ * Contrairement à la transporteuse, elle "produit" la ressource pour la colonie.
+ * * LOGIQUE DE VIE :
+ * - Elle utilise des Schedulers pour rythmer ses sorties et son métabolisme.
+ * - Elle doit manger au stock pendant son repos pour réinitialiser sa famine.
+ */
 object ForagerAntActor {
 
   val RestDuration: Int = 1 // cycles de repos avant de retravailler
@@ -17,7 +26,7 @@ object ForagerAntActor {
 
   def apply(queen: ActorRef[Command], storage: ActorRef[Command], id : Int): Behavior[Command] =
     Behaviors.setup { context =>
-      context.watch(queen) // surveille la reine
+      context.watch(queen) // Cycle de vie lié à la Reine : si la Reine meurt (watch), la fourmi s'arrête
       context.log.info(s"[Fourrageuse-$id] Prête.")
       // Scheduler interne — la fourmi s'envoie ses propres ordres
       context.system.scheduler.scheduleAtFixedRate(1.second, 6.seconds)( // la fourrageuse part chercher toutes les 6 secondes
@@ -29,7 +38,9 @@ object ForagerAntActor {
       idle(queen, storage, id, starvation = 0)
     }
 
-  // État : disponible, attend un ordre
+  /**
+   * État IDLE : La fourmi est à la colonie, prête à partir en mission.
+   */
   private def idle(queen: ActorRef[Command],storage: ActorRef[Command], id : Int ,starvation: Int): Behavior[Command] =
     Behaviors.receive[Command] { (context, message) =>
       message match {
@@ -42,6 +53,7 @@ object ForagerAntActor {
           resting(queen, storage, id, restCycles = RestDuration, starvation = 0)
 
         case AntTick =>
+          // Gestion de la famine si elle reste inactive trop longtemps
           val nextStarvation = starvation + 1
           SimulationLogger.logForagerStarving(id, nextStarvation, MaxStarvation)
           context.log.info(s"[Fourrageuse-$id] En attente — cycles sans nourriture : $nextStarvation/$MaxStarvation")
@@ -61,7 +73,9 @@ object ForagerAntActor {
         Behaviors.stopped
     }
 
-  // État : au repos, attend RestDuration ticks avant de retravailler
+  /**
+   * État RESTING : La fourmi se repose et tente de consommer une unité de nourriture pour elle-même.
+   */
   private def resting(queen: ActorRef[Command],storage: ActorRef[Command], id: Int, restCycles: Int, starvation: Int): Behavior[Command] =
     Behaviors.receive[Command] { (context, message) =>
       message match {
@@ -81,7 +95,9 @@ object ForagerAntActor {
     }
 
 
-  // État : au repos, a demandé de la nourriture, attend la réponse du stockage
+  /**
+   * État RESTING_WAITING : La fourmi attend que le stockage confirme s'il a pu la nourrir.
+   */
   private def restingWaiting(queen: ActorRef[Command], storage: ActorRef[Command], id: Int ,restCycles: Int, starvation: Int): Behavior[Command] =
     Behaviors.receive[Command] { (context, message) =>
       message match {
