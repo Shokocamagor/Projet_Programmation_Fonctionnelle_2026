@@ -1,0 +1,220 @@
+=== COLONIE DE FOURMIS — CYCLES, INTERACTIONS ET INVARIANTS ===
+
+
+--- ACTEURS ET LEURS CYCLES DE VIE ---
+
+REINE (QueenActor)
+  - Reçoit un Tick toutes les 4 secondes → faim augmente de 1
+  - Si faim > 10 → mort de la reine → la colonie s'effondre
+  - À chaque Tick, pond 2 œufs
+  - Reçoit FeedQueen des transporteuses → faim diminue de 1 (minimum 0)
+  - Reçoit SpawnAnt à l'éclosion → spawn une nouvelle fourmi si quota non atteint
+  - Reçoit AntDied → décrémente le compteur de la catégorie concernée
+  - État interne : hunger, foragerCount, carrierCount, liste des œufs en cours
+
+
+ŒUF (EggActor)
+  - Créé par la reine à chaque Tick (2 par cycle)
+  - Reçoit les Tick relayés par la reine
+  - Après 2 Tick reçus → éclosion
+  - Type déterminé aléatoirement à l'éclosion : Forager ou Carrier
+  - Envoie SpawnAnt à la reine puis s'arrête
+
+
+FOURRAGEUSE (ForagerAntActor)
+  États : idle → resting → restingWaiting → idle (cycle normal)
+          idle → mort (si 3 AntTick sans activité)
+          restingWaiting → mort (si 3 cycles sans manger au repos)
+
+  Cycle normal :
+    1. État idle : reçoit SearchFood (scheduler interne toutes les 6s)
+    2. Cherche entre 1 et 3 unités de nourriture (aléatoire)
+    3. Envoie DepositFood au stockage
+    4. Passe en état resting (repos de 1 cycle)
+    5. En état resting : reçoit AntTick → demande ConsumeFood au stockage
+    6. Si stockage répond FoodReady → nourrie, retour en idle, starvation = 0
+    7. Si stockage répond StorageEmpty → starvation + 1
+    8. Si starvation atteint 3 → envoie AntDied(Forager) à la reine → mort
+
+  Surveillance : observe la reine via watch(). Si la reine meurt → arrêt immédiat.
+
+
+TRANSPORTEUSE (CarrierAntActor)
+  États : idle → waiting → resting → restingWaiting → idle (cycle normal)
+          idle → mort (si 3 AntTick sans activité)
+          restingWaiting → mort (si 3 cycles sans manger au repos)
+
+  Cycle normal :
+    1. État idle : reçoit SearchFood (scheduler interne toutes les 2s)
+    2. Envoie RequestFood(max=2) au stockage
+    3. État waiting : attend la réponse du stockage
+    4. Si FoodReady → envoie FeedQueen à la reine, passe en resting, starvation = 0
+    5. Si StorageEmpty → retour en idle, starvation inchangé
+    6. En état resting : reçoit AntTick → demande ConsumeFood au stockage
+    7. Si FoodReady → nourrie, retour en idle
+    8. Si StorageEmpty → starvation + 1
+    9. Si starvation atteint 3 → envoie AntDied(Carrier) à la reine → mort
+
+  Surveillance : observe la reine via watch(). Si la reine meurt → arrêt immédiat.
+
+
+STOCKAGE (StorageActor)
+  - Reçoit DepositFood(n) des fourrageuses → stock += n (max 20)
+  - Reçoit RequestFood(max, replyTo) des transporteuses
+      → donne min(stock, max) unités, répond FoodReady ou StorageEmpty
+  - Reçoit ConsumeFood(replyTo) des fourmis au repos
+      → donne 1 unité si disponible, répond FoodReady ou StorageEmpty
+  - Pas de priorité codée explicitement — la priorité de la reine est
+    naturelle car les transporteuses livrent avant que les fourmis se reposent
+
+SUPERVISEUR (ColonyGuardianActor)
+  - Définit les stratégies de supervision Akka Typed pour chaque acteur
+  - StorageActor  → restart (max 3 fois / 10s)    : acteur critique, repart à stock=0
+  - QueenActor    → stop                           : mort = fin de colonie
+  - ForagerAntActor → restartWithBackoff(500ms–5s) : peut replanter et reprendre
+  - CarrierAntActor → restartWithBackoff(500ms–5s) : idem
+  - Pattern MessageAdapter illustré dans SimulationMonitor :
+      ActorRef[Command] traduit automatiquement vers MonitorCommand
+
+--- INTERACTIONS ENTRE ACTEURS ---
+
+  Fourrageuse ──DepositFood──────────► Stockage
+  Transporteuse ──RequestFood─────────► Stockage ──FoodReady──► Transporteuse
+  Transporteuse ──FeedQueen───────────► Reine
+  Fourrageuse (repos) ──ConsumeFood──► Stockage
+  Transporteuse (repos) ──ConsumeFood► Stockage
+  Œuf ──SpawnAnt──────────────────────► Reine ──spawn──► nouvelle fourmi
+  Fourmi morte ──AntDied──────────────► Reine
+
+
+--- INVARIANTS MÉTIER ---
+
+  I1 : La faim de la reine est toujours dans [0, 10]
+       Vérifié dans Invariants.scala à chaque Tick
+
+  I2 : Il ne peut pas y avoir plus de 4 fourrageuses simultanément
+       Vérifié dans QueenActor à chaque SpawnAnt(Forager)
+
+  I3 : Il ne peut pas y avoir plus de 4 transporteuses simultanément
+       Vérifié dans QueenActor à chaque SpawnAnt(Carrier)
+
+  I4 : Le stock ne peut pas dépasser 20 unités
+       Vérifié dans StorageActor à chaque DepositFood
+
+  I5 : Le stock ne peut pas être négatif
+       Garanti structurellement — le stockage ne livre que ce qu'il a
+
+  I6 : Une fourmi qui meurt notifie toujours la reine
+       Garanti par AntDied envoyé avant Behaviors.stopped
+
+--- RÉSEAU DE PÉTRI (petri.scala) ---
+
+  Correspondance Akka → Pétri :
+
+  ACTEUR AKKA        PLACES
+  ─────────────────────────────────────────────────────────────────────────────
+  QueenActor         queen_alive, queen_dead, queen_sated, hunger_token
+  StorageActor       stock  (1 jeton = 1 unité, borné à 20)
+  ForagerAntActor    forager_idle, forager_resting, forager_resting_waiting,
+                     forager_dead, forager_starvation
+  CarrierAntActor    carrier_idle, carrier_waiting, carrier_resting,
+                     carrier_resting_waiting, carrier_dead, carrier_starvation
+  EggActor           egg_cycle1 (cyclesLeft=2), egg_cycle2 (cyclesLeft=1)
+  ─────────────────────────────────────────────────────────────────────────────
+  Total              18 places, ~35 transitions
+
+  MESSAGE AKKA          TRANSITION(S)
+  ─────────────────────────────────────────────────────────────────────────────
+  Tick (reine)          t_tick, t_queen_dies
+  Tick (ponte)          t_lay_egg
+  Tick (œuf cycle 1)    t_egg_incubate
+  Tick (œuf cycle 2)    t_spawn_forager | t_spawn_carrier
+  FeedQueen(2)          t_carrier_deliver
+  FeedQueen→sated       t_carrier_deliver_sated
+  queen_sated→alive     t_queen_unsated
+  AntDied(Forager)      t_forager_died_notify
+  AntDied(Carrier)      t_carrier_died_notify
+  SearchFood+Deposit    t_search_food
+  AntTick idle (forag.) t_forager_starve_idle, t_forager_dies_idle
+  ConsumeFood (forag.)  t_forager_consume, t_forager_fed | t_forager_consume_empty
+  AntTick idle (carr.)  t_carrier_starve_idle, t_carrier_dies_idle
+  ConsumeFood (carr.)   t_carrier_consume, t_carrier_fed | t_carrier_consume_empty
+  RequestFood           t_request_food | t_request_food_empty
+  ─────────────────────────────────────────────────────────────────────────────
+
+  P-invariants (y^T · C = 0) :
+    PI1 : M(queen_alive) + M(queen_dead) + M(queen_sated) = 1  (reine dans 1 seul état)
+    PI2 : M(forager_idle) + M(forager_resting) + M(forager_resting_waiting)
+          + M(forager_dead) ≤ 4  (population fourrageuses)
+    PI3 : M(carrier_idle) + M(carrier_waiting) + M(carrier_resting)
+          + M(carrier_resting_waiting) + M(carrier_dead) ≤ 4  (population transporteuses)
+    PI4 : M(stock) ∈ [0, 20]
+    PI5 : M(hunger_token) ∈ [0, 11]  (11 déclenche t_queen_dies)
+    PI6 : M(forager_starvation) ∈ [0, 3]
+    PI7 : M(carrier_starvation) ∈ [0, 3]
+
+  T-invariants (cycles de base) :
+    TI1 : t_search_food · t_forager_consume · t_forager_fed          [cycle fourrageuse]
+    TI2 : t_request_food · t_carrier_deliver · t_carrier_consume · t_carrier_fed  [cycle transporteuse]
+    TI3 : t_tick · t_carrier_deliver                                  [cycle faim reine]
+    TI4 : t_lay_egg · t_egg_incubate · t_spawn_forager               [cycle œuf → fourrageuse]
+
+
+--- PROPRIÉTÉS LTL (vérifiées sur l'espace d'états BFS) ---
+
+  Sûreté :
+    LTL1 : □ (M(queen_alive)+M(queen_dead)+M(queen_sated) = 1)
+             → La reine est toujours dans un état bien défini
+
+    LTL2 : □ (M(stock) ≥ 0)
+             → Le stock ne devient jamais négatif
+
+    LTL3 : □ (population(F) ≤ 4 ∧ population(C) ≤ 4)
+             → Les quotas par catégorie sont toujours respectés
+
+    LTL4 : □ (M(queen_alive)=1 → 0 ≤ M(hunger_token) ≤ 10)
+             → La faim reste bornée si la reine est vivante
+
+  Vivacité :
+    LTL5 : □ (M(forager_idle) ≥ 1 → ◇ t_search_food franchissable)
+             → Toute fourrageuse idle finit par chercher de la nourriture
+
+    LTL6 : □ (M(carrier_idle) ≥ 1 ∧ M(stock) ≥ 2 → ◇ t_carrier_deliver franchissable)
+             → Toute transporteuse avec stock disponible finit par livrer
+
+    LTL7 : □ (M(egg_cycle1) ≥ 1 → ◇ t_egg_incubate franchissable)
+             → Tout œuf en cycle 1 progresse vers le cycle 2
+
+  Terminaison / Deadlock :
+    LTL8 : □ (deadlock → M(queen_dead) = 1)
+             → Un deadlock n'est atteignable que si la reine est morte
+
+    LTL9 : □ ((fourmis_actives = 0 ∧ M(stock) = 0) → ◇ M(queen_dead) = 1)
+             → Sans fourmis ni stock, la reine meurt inévitablement
+
+
+--- TESTS UNITAIRES ---
+
+  ActorSpec.scala (Akka Actor TestKit + ScalaTest) :
+    StorageActor (7 tests)  : dépôt, fourniture, borne capacité, stock vide,
+                              ConsumeFood, demande > stock, séquences multiples
+    QueenActor (7 tests)    : Tick, FeedQueen, Stop, SpawnAnt (quota libre /
+                              quota atteint), AntDied (fourrageuse / transporteuse)
+    Invariants (12 tests)   : toutes les fonctions de vérification, cas limites
+    EggActor (3 tests)      : incubation, éclosion après 2 Tick, arrêt post-éclosion
+    Protocole (2 tests)     : unicité des AntType, construction de tous les messages
+
+  PetrinetSpec.scala (ScalaTest) :
+    1.  Structure du réseau        : 18 places, noms uniques, poids P/T > 0
+    2.  Marquage initial M₀        : correspondance exacte avec Simulation.scala
+    3.  Franchissabilité depuis M₀ : 5 activées, 6 bloquées
+    4.  Franchissement fire        : vérification des marquages après chaque transition
+    5.  P-invariants sur M₀        : aucune violation attendue
+    6.  Vérification analytique    : y^T · C = 0 pour PI1
+    7.  Exploration BFS             : max 5000 marquages
+    8.  Détection de deadlocks     : deadlocks uniquement si queen_dead
+    9.  LTL1–LTL9                  : toutes vérifiées ✓
+    10. Scénarios bout en bout     : flux nominaux fourrageuse / transporteuse,
+                                    mort de la reine, famine en 3 AntTick
+    11. Cycle de vie d'un œuf     : egg_cycle1 → egg_cycle2 → forager/carrier
+    12. Correspondance Akka ↔ Pétri: t_tick, t_carrier_deliver, t_search_food, etc.

@@ -1,0 +1,202 @@
+{"ts":"2026-04-14T12:52:37.858556687Z","actor":"System","event":"SimulationStart","detail":"Démarrage de la simulation"}
+{"ts":"2026-04-14T12:52:37.913316244Z","actor":"Simulation","event":"Init","detail":"Supervision activée — Fourrageuse-1 et Transporteuse-1 spawned","stock":"0","hunger":"5","storage_strategy":"restart_max3_10s","foragers":"1","ant_strategy":"restartWithBackoff_500ms_5s","carriers":"1"}
+{"ts":"2026-04-14T12:52:38.937530530Z","actor":"Reine","event":"Tick","detail":"faim 5 → 6","hunger":"6"}
+{"ts":"2026-04-14T12:52:38.938536306Z","actor":"Fourrageuse-1","event":"SearchFood","detail":"1 unité(s) trouvée(s)","found":"1"}
+{"ts":"2026-04-14T12:52:38.945575256Z","actor":"Stockage","event":"DepositFood","detail":"+1 unité(s)","before":"0","after":"1"}
+{"ts":"2026-04-14T12:52:39.931538237Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → carrier-1","before":"1","after":"0"}
+{"ts":"2026-04-14T12:52:39.933798247Z","actor":"Transporteuse-1","event":"DeliverFood","detail":"livre 1 unité(s) à la reine","amount":"1"}
+{"ts":"2026-04-14T12:52:39.937922240Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 1 unité(s)","hunger":"5","delta":"-1"}
+{"ts":"2026-04-14T12:52:40.931240472Z","actor":"Fourrageuse-1","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:52:40.933749196Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-1","stock":"0"}
+{"ts":"2026-04-14T12:52:40.938831039Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour forager-1","stock":"0"}
+{"ts":"2026-04-14T12:52:40.939434323Z","actor":"Transporteuse-1","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:52:40.941122807Z","actor":"Fourrageuse-1","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:52:41.930622718Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-1","stock":"0"}
+{"ts":"2026-04-14T12:52:42.918882275Z","actor":"Reine","event":"Tick","detail":"faim 5 → 6","hunger":"6"}
+{"ts":"2026-04-14T12:52:43.929831377Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-1","stock":"0"}
+{"ts":"2026-04-14T12:52:44.918765018Z","actor":"Fourrageuse-1","event":"SearchFood","detail":"1 unité(s) trouvée(s)","found":"1"}
+{"ts":"2026-04-14T12:52:44.923007660Z","actor":"Stockage","event":"DepositFood","detail":"+1 unité(s)","before":"0","after":"1"}
+{"ts":"2026-04-14T12:52:44.929202303Z","actor":"Fourrageuse-1","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:52:44.931189211Z","actor":"Transporteuse-1","event":"Starvation","detail":"famine 2/3","starvation":"2"}
+{"ts":"2026-04-14T12:52:44.935298749Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → forager-1","before":"1","after":"0"}
+{"ts":"2026-04-14T12:52:45.929613443Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-1","stock":"0"}
+{"ts":"2026-04-14T12:52:46.929127642Z","actor":"Reine","event":"Tick","detail":"faim 6 → 7","hunger":"7"}
+{"ts":"2026-04-14T12:52:46.932804687Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Carrier","type":"Carrier"}
+{"ts":"2026-04-14T12:52:46.935676897Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Carrier","type":"Carrier"}
+{"ts":"2026-04-14T12:52:46.940608209Z","actor":"Reine","event":"SpawnAnt","detail":"Transporteuse-2 née","type":"Transporteuse","id":"2","total":"2"}
+{"ts":"2026-04-14T12:52:46.944437030Z","actor":"Reine","event":"SpawnAnt","detail":"Transporteuse-3 née","type":"Transporteuse","id":"3","total":"3"}
+{"ts":"2026-04-14T12:52:47.930324501Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-1","stock":"0"}
+{"ts":"2026-04-14T12:52:48.929478613Z","actor":"Transporteuse-1","event":"Starvation","detail":"famine 3/3","starvation":"3"}
+{"ts":"2026-04-14T12:52:48.930751084Z","actor":"Fourrageuse-1","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:52:48.936400998Z","actor":"Reine","event":"AntDied","detail":"Transporteuse-1 morte","type":"Transporteuse","id":"1","total":"2"}
+{"ts":"2026-04-14T12:52:48.961294859Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-3","stock":"0"}
+{"ts":"2026-04-14T12:52:48.962605302Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-2","stock":"0"}
+{"ts":"2026-04-14T12:52:49.959261191Z","actor":"Transporteuse-3","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:52:49.959511225Z","actor":"Transporteuse-2","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:52:50.928420171Z","actor":"Fourrageuse-1","event":"SearchFood","detail":"2 unité(s) trouvée(s)","found":"2"}
+{"ts":"2026-04-14T12:52:50.928812533Z","actor":"Reine","event":"Tick","detail":"faim 7 → 8","hunger":"8"}
+{"ts":"2026-04-14T12:52:50.932888670Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Forager","type":"Forager"}
+{"ts":"2026-04-14T12:52:50.933283987Z","actor":"Stockage","event":"DepositFood","detail":"+2 unité(s)","before":"0","after":"2"}
+{"ts":"2026-04-14T12:52:50.934421661Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Forager","type":"Forager"}
+{"ts":"2026-04-14T12:52:50.940136390Z","actor":"Reine","event":"SpawnAnt","detail":"Fourrageuse-2 née","type":"Fourrageuse","id":"2","total":"2"}
+{"ts":"2026-04-14T12:52:50.943989605Z","actor":"Reine","event":"SpawnAnt","detail":"Fourrageuse-3 née","type":"Fourrageuse","id":"3","total":"3"}
+{"ts":"2026-04-14T12:52:50.961422463Z","actor":"Stockage","event":"ProvideFood","detail":"-2 → carrier-3","before":"2","after":"0"}
+{"ts":"2026-04-14T12:52:50.963400863Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-2","stock":"0"}
+{"ts":"2026-04-14T12:52:50.964527742Z","actor":"Transporteuse-3","event":"DeliverFood","detail":"livre 2 unité(s) à la reine","amount":"2"}
+{"ts":"2026-04-14T12:52:50.966400103Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 2 unité(s)","hunger":"6","delta":"-2"}
+{"ts":"2026-04-14T12:52:51.959025831Z","actor":"Fourrageuse-3","event":"SearchFood","detail":"2 unité(s) trouvée(s)","found":"2"}
+{"ts":"2026-04-14T12:52:51.959755403Z","actor":"Fourrageuse-2","event":"SearchFood","detail":"1 unité(s) trouvée(s)","found":"1"}
+{"ts":"2026-04-14T12:52:51.962560112Z","actor":"Stockage","event":"DepositFood","detail":"+2 unité(s)","before":"0","after":"2"}
+{"ts":"2026-04-14T12:52:51.964491472Z","actor":"Stockage","event":"DepositFood","detail":"+1 unité(s)","before":"2","after":"3"}
+{"ts":"2026-04-14T12:52:52.929301054Z","actor":"Fourrageuse-1","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:52:52.932055987Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → forager-1","before":"3","after":"2"}
+{"ts":"2026-04-14T12:52:52.960293596Z","actor":"Stockage","event":"ProvideFood","detail":"-2 → carrier-2","before":"2","after":"0"}
+{"ts":"2026-04-14T12:52:52.962443618Z","actor":"Transporteuse-2","event":"DeliverFood","detail":"livre 2 unité(s) à la reine","amount":"2"}
+{"ts":"2026-04-14T12:52:52.965812596Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 2 unité(s)","hunger":"4","delta":"-2"}
+{"ts":"2026-04-14T12:52:53.962062294Z","actor":"Fourrageuse-2","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:52:53.962688327Z","actor":"Fourrageuse-3","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:52:53.963081103Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-3","stock":"0"}
+{"ts":"2026-04-14T12:52:53.964299022Z","actor":"Transporteuse-3","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:52:53.964868914Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour forager-2","stock":"0"}
+{"ts":"2026-04-14T12:52:53.967266857Z","actor":"Fourrageuse-2","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:52:53.969079396Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-2","stock":"0"}
+{"ts":"2026-04-14T12:52:53.970961059Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour forager-3","stock":"0"}
+{"ts":"2026-04-14T12:52:53.971369840Z","actor":"Transporteuse-2","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:52:53.975548499Z","actor":"Fourrageuse-3","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:52:54.928767466Z","actor":"Reine","event":"Tick","detail":"faim 4 → 5","hunger":"5"}
+{"ts":"2026-04-14T12:52:54.941862949Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Carrier","type":"Carrier"}
+{"ts":"2026-04-14T12:52:54.943335231Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Forager","type":"Forager"}
+{"ts":"2026-04-14T12:52:54.943734406Z","actor":"Reine","event":"SpawnAnt","detail":"Transporteuse-4 née","type":"Transporteuse","id":"4","total":"3"}
+{"ts":"2026-04-14T12:52:54.949375749Z","actor":"Reine","event":"SpawnAnt","detail":"Fourrageuse-4 née","type":"Fourrageuse","id":"4","total":"4"}
+{"ts":"2026-04-14T12:52:54.961435177Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-2","stock":"0"}
+{"ts":"2026-04-14T12:52:54.963100510Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-3","stock":"0"}
+{"ts":"2026-04-14T12:52:55.969147086Z","actor":"Fourrageuse-4","event":"SearchFood","detail":"3 unité(s) trouvée(s)","found":"3"}
+{"ts":"2026-04-14T12:52:55.971543215Z","actor":"Stockage","event":"DepositFood","detail":"+3 unité(s)","before":"0","after":"3"}
+{"ts":"2026-04-14T12:52:56.930373587Z","actor":"Fourrageuse-1","event":"SearchFood","detail":"2 unité(s) trouvée(s)","found":"2"}
+{"ts":"2026-04-14T12:52:56.933902754Z","actor":"Stockage","event":"DepositFood","detail":"+2 unité(s)","before":"3","after":"5"}
+{"ts":"2026-04-14T12:52:56.940051457Z","actor":"Fourrageuse-1","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:52:56.942090279Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → forager-1","before":"5","after":"4"}
+{"ts":"2026-04-14T12:52:56.962480305Z","actor":"Stockage","event":"ProvideFood","detail":"-2 → carrier-4","before":"4","after":"2"}
+{"ts":"2026-04-14T12:52:56.964409238Z","actor":"Transporteuse-4","event":"DeliverFood","detail":"livre 2 unité(s) à la reine","amount":"2"}
+{"ts":"2026-04-14T12:52:56.965251006Z","actor":"Stockage","event":"ProvideFood","detail":"-2 → carrier-3","before":"2","after":"0"}
+{"ts":"2026-04-14T12:52:56.966491160Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 2 unité(s)","hunger":"3","delta":"-2"}
+{"ts":"2026-04-14T12:52:56.968029586Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-2","stock":"0"}
+{"ts":"2026-04-14T12:52:56.968531172Z","actor":"Transporteuse-3","event":"DeliverFood","detail":"livre 2 unité(s) à la reine","amount":"2"}
+{"ts":"2026-04-14T12:52:56.970782472Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 2 unité(s)","hunger":"1","delta":"-2"}
+{"ts":"2026-04-14T12:52:57.961232238Z","actor":"Fourrageuse-3","event":"SearchFood","detail":"2 unité(s) trouvée(s)","found":"2"}
+{"ts":"2026-04-14T12:52:57.964023403Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-3","stock":"0"}
+{"ts":"2026-04-14T12:52:57.965482588Z","actor":"Transporteuse-2","event":"Starvation","detail":"famine 2/3","starvation":"2"}
+{"ts":"2026-04-14T12:52:57.966176516Z","actor":"Fourrageuse-2","event":"SearchFood","detail":"2 unité(s) trouvée(s)","found":"2"}
+{"ts":"2026-04-14T12:52:57.966959614Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-4","stock":"0"}
+{"ts":"2026-04-14T12:52:57.968588657Z","actor":"Transporteuse-3","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:52:57.971790060Z","actor":"Fourrageuse-4","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:52:57.972699788Z","actor":"Stockage","event":"DepositFood","detail":"+2 unité(s)","before":"0","after":"2"}
+{"ts":"2026-04-14T12:52:57.973147595Z","actor":"Fourrageuse-3","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:52:57.974678356Z","actor":"Stockage","event":"DepositFood","detail":"+2 unité(s)","before":"2","after":"4"}
+{"ts":"2026-04-14T12:52:57.974991938Z","actor":"Transporteuse-4","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:52:57.976436068Z","actor":"Fourrageuse-2","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:52:57.976915683Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → forager-3","before":"4","after":"3"}
+{"ts":"2026-04-14T12:52:57.978426339Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → forager-4","before":"3","after":"2"}
+{"ts":"2026-04-14T12:52:57.980458255Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → forager-2","before":"2","after":"1"}
+{"ts":"2026-04-14T12:52:58.929696930Z","actor":"Reine","event":"Tick","detail":"faim 1 → 2","hunger":"2"}
+{"ts":"2026-04-14T12:52:58.934017780Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Carrier","type":"Carrier"}
+{"ts":"2026-04-14T12:52:58.934617900Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Forager","type":"Forager"}
+{"ts":"2026-04-14T12:52:58.938790898Z","actor":"Reine","event":"SpawnAnt","detail":"Transporteuse-5 née","type":"Transporteuse","id":"5","total":"4"}
+{"ts":"2026-04-14T12:52:58.951072204Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → carrier-2","before":"1","after":"0"}
+{"ts":"2026-04-14T12:52:58.953595617Z","actor":"Transporteuse-2","event":"DeliverFood","detail":"livre 1 unité(s) à la reine","amount":"1"}
+{"ts":"2026-04-14T12:52:58.957795969Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 1 unité(s)","hunger":"1","delta":"-1"}
+{"ts":"2026-04-14T12:52:58.960861466Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-4","stock":"0"}
+{"ts":"2026-04-14T12:52:58.961769313Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-3","stock":"0"}
+{"ts":"2026-04-14T12:53:00.930991520Z","actor":"Fourrageuse-1","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:00.960981233Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-3","stock":"0"}
+{"ts":"2026-04-14T12:53:00.962182716Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-5","stock":"0"}
+{"ts":"2026-04-14T12:53:00.963360164Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-4","stock":"0"}
+{"ts":"2026-04-14T12:53:01.949028329Z","actor":"Fourrageuse-4","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:01.959306136Z","actor":"Fourrageuse-2","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:01.959733259Z","actor":"Fourrageuse-3","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:01.961214086Z","actor":"Transporteuse-3","event":"Starvation","detail":"famine 2/3","starvation":"2"}
+{"ts":"2026-04-14T12:53:01.963870990Z","actor":"Transporteuse-4","event":"Starvation","detail":"famine 2/3","starvation":"2"}
+{"ts":"2026-04-14T12:53:01.964444709Z","actor":"Transporteuse-5","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:01.964831486Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-2","stock":"0"}
+{"ts":"2026-04-14T12:53:01.968569542Z","actor":"Fourrageuse-4","event":"SearchFood","detail":"3 unité(s) trouvée(s)","found":"3"}
+{"ts":"2026-04-14T12:53:01.969734887Z","actor":"Transporteuse-2","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:01.972270913Z","actor":"Stockage","event":"DepositFood","detail":"+3 unité(s)","before":"0","after":"3"}
+{"ts":"2026-04-14T12:53:02.928765284Z","actor":"Fourrageuse-1","event":"SearchFood","detail":"1 unité(s) trouvée(s)","found":"1"}
+{"ts":"2026-04-14T12:53:02.929238985Z","actor":"Reine","event":"Tick","detail":"faim 1 → 2","hunger":"2"}
+{"ts":"2026-04-14T12:53:02.930512870Z","actor":"Stockage","event":"DepositFood","detail":"+1 unité(s)","before":"3","after":"4"}
+{"ts":"2026-04-14T12:53:02.930956338Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Forager","type":"Forager"}
+{"ts":"2026-04-14T12:53:02.931319533Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Carrier","type":"Carrier"}
+{"ts":"2026-04-14T12:53:02.961067359Z","actor":"Stockage","event":"ProvideFood","detail":"-2 → carrier-2","before":"4","after":"2"}
+{"ts":"2026-04-14T12:53:02.962609070Z","actor":"Transporteuse-2","event":"DeliverFood","detail":"livre 2 unité(s) à la reine","amount":"2"}
+{"ts":"2026-04-14T12:53:02.962891467Z","actor":"Stockage","event":"ProvideFood","detail":"-2 → carrier-5","before":"2","after":"0"}
+{"ts":"2026-04-14T12:53:02.963442629Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 2 unité(s)","hunger":"0","delta":"-2"}
+{"ts":"2026-04-14T12:53:02.964483471Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-4","stock":"0"}
+{"ts":"2026-04-14T12:53:02.965365812Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-3","stock":"0"}
+{"ts":"2026-04-14T12:53:02.966158073Z","actor":"Transporteuse-5","event":"DeliverFood","detail":"livre 2 unité(s) à la reine","amount":"2"}
+{"ts":"2026-04-14T12:53:02.968132358Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 2 unité(s)","hunger":"0","delta":"-2"}
+{"ts":"2026-04-14T12:53:03.960444893Z","actor":"Fourrageuse-3","event":"SearchFood","detail":"2 unité(s) trouvée(s)","found":"2"}
+{"ts":"2026-04-14T12:53:03.961157235Z","actor":"Fourrageuse-2","event":"SearchFood","detail":"3 unité(s) trouvée(s)","found":"3"}
+{"ts":"2026-04-14T12:53:03.963023386Z","actor":"Stockage","event":"DepositFood","detail":"+3 unité(s)","before":"0","after":"3"}
+{"ts":"2026-04-14T12:53:03.967515871Z","actor":"Stockage","event":"DepositFood","detail":"+2 unité(s)","before":"3","after":"5"}
+{"ts":"2026-04-14T12:53:04.929277652Z","actor":"Fourrageuse-1","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:53:04.930684381Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → forager-1","before":"5","after":"4"}
+{"ts":"2026-04-14T12:53:04.960715813Z","actor":"Stockage","event":"ProvideFood","detail":"-2 → carrier-4","before":"4","after":"2"}
+{"ts":"2026-04-14T12:53:04.961542904Z","actor":"Stockage","event":"ProvideFood","detail":"-2 → carrier-3","before":"2","after":"0"}
+{"ts":"2026-04-14T12:53:04.961789533Z","actor":"Transporteuse-4","event":"DeliverFood","detail":"livre 2 unité(s) à la reine","amount":"2"}
+{"ts":"2026-04-14T12:53:04.962185112Z","actor":"Transporteuse-3","event":"DeliverFood","detail":"livre 2 unité(s) à la reine","amount":"2"}
+{"ts":"2026-04-14T12:53:04.962385725Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 2 unité(s)","hunger":"0","delta":"-2"}
+{"ts":"2026-04-14T12:53:04.962901443Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 2 unité(s)","hunger":"0","delta":"-2"}
+{"ts":"2026-04-14T12:53:05.962085502Z","actor":"Fourrageuse-2","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:53:05.962611620Z","actor":"Fourrageuse-3","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:53:05.964745901Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-3","stock":"0"}
+{"ts":"2026-04-14T12:53:05.971171534Z","actor":"Fourrageuse-4","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:53:05.976715161Z","actor":"Transporteuse-3","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:05.976962498Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-5","stock":"0"}
+{"ts":"2026-04-14T12:53:05.978066344Z","actor":"Transporteuse-5","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:05.978275073Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour forager-3","stock":"0"}
+{"ts":"2026-04-14T12:53:05.978927304Z","actor":"Fourrageuse-3","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:05.979415145Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-2","stock":"0"}
+{"ts":"2026-04-14T12:53:05.984050163Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour forager-4","stock":"0"}
+{"ts":"2026-04-14T12:53:05.984990444Z","actor":"Transporteuse-2","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:05.985579038Z","actor":"Fourrageuse-4","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:05.986024593Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-4","stock":"0"}
+{"ts":"2026-04-14T12:53:05.986673363Z","actor":"Transporteuse-4","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:05.987618226Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour forager-2","stock":"0"}
+{"ts":"2026-04-14T12:53:05.992181721Z","actor":"Fourrageuse-2","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:06.931901207Z","actor":"Reine","event":"Tick","detail":"faim 0 → 1","hunger":"1"}
+{"ts":"2026-04-14T12:53:06.940401690Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Forager","type":"Forager"}
+{"ts":"2026-04-14T12:53:06.941488725Z","actor":"Œuf","event":"EggHatched","detail":"Éclosion → Carrier","type":"Carrier"}
+{"ts":"2026-04-14T12:53:06.960438318Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-3","stock":"0"}
+{"ts":"2026-04-14T12:53:06.961422674Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-4","stock":"0"}
+{"ts":"2026-04-14T12:53:06.962647384Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-2","stock":"0"}
+{"ts":"2026-04-14T12:53:06.963448864Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-5","stock":"0"}
+{"ts":"2026-04-14T12:53:07.969422074Z","actor":"Fourrageuse-4","event":"SearchFood","detail":"3 unité(s) trouvée(s)","found":"3"}
+{"ts":"2026-04-14T12:53:07.972481585Z","actor":"Stockage","event":"DepositFood","detail":"+3 unité(s)","before":"0","after":"3"}
+{"ts":"2026-04-14T12:53:08.930849141Z","actor":"Fourrageuse-1","event":"SearchFood","detail":"2 unité(s) trouvée(s)","found":"2"}
+{"ts":"2026-04-14T12:53:08.933282651Z","actor":"Stockage","event":"DepositFood","detail":"+2 unité(s)","before":"3","after":"5"}
+{"ts":"2026-04-14T12:53:08.933695311Z","actor":"Fourrageuse-1","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:53:08.946111704Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → forager-1","before":"5","after":"4"}
+{"ts":"2026-04-14T12:53:08.965232092Z","actor":"Stockage","event":"ProvideFood","detail":"-2 → carrier-3","before":"4","after":"2"}
+{"ts":"2026-04-14T12:53:08.971563901Z","actor":"Transporteuse-3","event":"DeliverFood","detail":"livre 2 unité(s) à la reine","amount":"2"}
+{"ts":"2026-04-14T12:53:08.971872032Z","actor":"Stockage","event":"ProvideFood","detail":"-2 → carrier-2","before":"2","after":"0"}
+{"ts":"2026-04-14T12:53:08.972554009Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 2 unité(s)","hunger":"0","delta":"-2"}
+{"ts":"2026-04-14T12:53:08.972864579Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-5","stock":"0"}
+{"ts":"2026-04-14T12:53:08.973282425Z","actor":"Transporteuse-2","event":"DeliverFood","detail":"livre 2 unité(s) à la reine","amount":"2"}
+{"ts":"2026-04-14T12:53:08.976230939Z","actor":"Reine","event":"FeedQueen","detail":"reçoit 2 unité(s)","hunger":"0","delta":"-2"}
+{"ts":"2026-04-14T12:53:08.977911680Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-4","stock":"0"}
+{"ts":"2026-04-14T12:53:09.949508649Z","actor":"Transporteuse-5","event":"Starvation","detail":"famine 2/3","starvation":"2"}
+{"ts":"2026-04-14T12:53:09.951035980Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-3","stock":"0"}
+{"ts":"2026-04-14T12:53:09.951898065Z","actor":"Transporteuse-3","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:09.958906024Z","actor":"Transporteuse-4","event":"Starvation","detail":"famine 2/3","starvation":"2"}
+{"ts":"2026-04-14T12:53:09.959259157Z","actor":"Fourrageuse-2","event":"SearchFood","detail":"3 unité(s) trouvée(s)","found":"3"}
+{"ts":"2026-04-14T12:53:09.959496255Z","actor":"Stockage","event":"StorageEmpty","detail":"stock vide pour carrier-2","stock":"0"}
+{"ts":"2026-04-14T12:53:09.963896932Z","actor":"Fourrageuse-3","event":"Starvation","detail":"famine 2/3","starvation":"2"}
+{"ts":"2026-04-14T12:53:09.964955120Z","actor":"Transporteuse-2","event":"Starvation","detail":"famine 1/3","starvation":"1"}
+{"ts":"2026-04-14T12:53:09.965497067Z","actor":"Fourrageuse-3","event":"SearchFood","detail":"1 unité(s) trouvée(s)","found":"1"}
+{"ts":"2026-04-14T12:53:09.966700809Z","actor":"Fourrageuse-2","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:53:09.968083846Z","actor":"Fourrageuse-4","event":"Resting","detail":"repos — cycles restants : 0","restCycles":"0"}
+{"ts":"2026-04-14T12:53:09.968769139Z","actor":"Stockage","event":"DepositFood","detail":"+3 unité(s)","before":"0","after":"3"}
+{"ts":"2026-04-14T12:53:09.970123375Z","actor":"Stockage","event":"DepositFood","detail":"+1 unité(s)","before":"3","after":"4"}
+{"ts":"2026-04-14T12:53:09.971464522Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → forager-2","before":"4","after":"3"}
+{"ts":"2026-04-14T12:53:09.973417563Z","actor":"Stockage","event":"ProvideFood","detail":"-1 → forager-4","before":"3","after":"2"}
+{"ts":"2026-04-14T12:53:09.991720292Z","actor":"System","event":"SimulationStop","detail":"Arrêt de la simulation"}
